@@ -3,7 +3,8 @@ module Raven.Data.Entry
   , buildEntry
   , dumpEntry
   , isNA
-  , BasicEntry) where
+  , BasicEntry
+  , BasicUnboundEntry) where
 
 import Data.Ratio
 import qualified Data.Text as Text
@@ -68,3 +69,35 @@ data BasicUnboundEntry = BasicUnboundInt Integer
                        | BasicUnboundString Text
                        | BasicUnboundBool Bool
                        | BasicUnboundNA
+
+instance Entry BasicUnboundEntry where
+  buildEntry val
+    |typeOf val == typeOf (4 :: Int) = case cast val of
+       Just val' -> BasicInt val'
+       _ -> BasicNA
+    |typeOf val == typeOf (4 :: Integer) = case cast val of
+       Just val' -> BasicInt $ fromInteger val'
+       _ -> BasicNA
+    |typeOf val == typeOf (4 :: Float) = case cast val of
+       Just val' -> BasicDouble val'
+       _ -> BasicNA
+    |typeOf val == typeOf (4 :: Double) = case cast val of
+       Just val' -> BasicDouble val'
+       _ -> BasicNA
+    |typeOf val == typeOf ((4 :: Int) % (4 :: Int)) = case cast val of
+       Just val' -> BasicRatio $ (fromInteger . numerator) val' %
+         (fromInteger . denominator) val'
+       _ -> BasicNA
+    |typeOf val == typeOf ((4 :: Integer) % (4 :: Integer)) = case cast val of
+       Just val' -> BasicRatio val'
+       _ -> BasicNA
+    |typeOf val == typeOf "check" = case cast val of
+       Just val' -> BasicString $ Text.pack val'
+       _ -> BasicNA
+    |typeOf val == typeOf Text.empty = case cast val of
+       Just val' -> BasicString val'
+       _ -> BasicNA
+    |typeOf val == typeOf True = case cast val of
+       Just val' -> BasicBool val'
+       _ -> BasicNA
+    |otherwise = BasicNA
