@@ -8,6 +8,7 @@ import Data.Typeable
 class Entry a where
   buildEntry :: (Typeable b) => b -> a
   dumpEntry :: (Typeable b) => a -> b
+  isNA :: a -> Bool
 
 data BasicEntry = BasicInt Int
                 | BasicDouble Double
