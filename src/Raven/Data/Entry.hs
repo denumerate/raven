@@ -26,12 +26,39 @@ data BasicEntry = BasicInt Int
 
 instance Entry BasicEntry where
   buildEntry val
-    |
+    |typeOf val == typeOf (4 :: Int) = case cast val of
+       Just val' -> BasicInt val'
+       _ -> BasicNA
+    |typeOf val == typeOf (4 :: Integer) = case cast val of
+       Just val' -> BasicInt val'
+       _ -> BasicNA
+    |typeOf val == typeOf (4 :: Float) = case cast val of
+       Just val' -> BasicDouble val'
+       _ -> BasicNA
+    |typeOf val == typeOf (4 :: Double) = case cast val of
+       Just val' -> BasicDouble val'
+       _ -> BasicNA
+    |typeOf val == typeOf ((4 :: Int) % (4 :: Int)) = case cast val of
+       Just val' -> BasicRatio val'
+       _ -> BasicNA
+    |typeOf val == typeOf ((4 :: Integer) % (4 :: Integer)) = case cast val of
+       Just val' -> BasicRatio val'
+       _ -> BasicNA
+    |typeOf val == typeOf "check" = case cast val of
+       Just val' -> BasicString val'
+       _ -> BasicNA
+    |typeOf val == (typeOf . Text.pack) "check" = case cast val of
+       Just val' -> BasicString val'
+       _ -> BasicNA
+    |typeOf val == typeOf True = case cast val of
+       Just val' -> BasicBool val'
+       _ -> BasicNA
+    |otherwise = BasicNA
 
 -- | BasicUnboundEntry creates a simple entry with unbounded values
 data BasicUnboundEntry = BasicUnboundInt Integer
                        | BasicUnboundDouble Double
-                       | BasicUnboundRatio (Ratio Integer)
+                       | BasicUnboundRatio Rational
                        | BasicUnboundString Text
                        | BasicUnboundBool Bool
                        | BasicUnboundNA
