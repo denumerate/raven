@@ -3,10 +3,11 @@ module Raven.Data.Entry () where
 import Data.Ratio
 import qualified Data.Text as Text
 import Data.Text (Text)
+import Data.Typeable
 
 class Entry a where
-  buildEntry :: b -> a
-  dumpEntry :: a -> b
+  buildEntry :: (Typeable b) => b -> a
+  dumpEntry :: (Typeable b) => a -> b
 
 data BasicEntry = BasicInt Int
                 | BasicDouble Double
@@ -16,7 +17,8 @@ data BasicEntry = BasicInt Int
                 | BasicNA
 
 instance Entry BasicEntry where
-  
+  buildEntry val
+    |
 
 data BasicUnboundEntry = BasicUnboundInt Integer
                        | BasicUnboundDouble Double
