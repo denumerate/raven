@@ -1,4 +1,9 @@
-module Raven.Data.Entry () where
+module Raven.Data.Entry
+  ( Entry
+  , buildEntry
+  , dumpEntry
+  , isNA
+  , BasicEntry) where
 
 import Data.Ratio
 import qualified Data.Text as Text
@@ -30,7 +35,7 @@ instance Entry BasicEntry where
        Just val' -> BasicInt val'
        _ -> BasicNA
     |typeOf val == typeOf (4 :: Integer) = case cast val of
-       Just val' -> BasicInt val'
+       Just val' -> BasicInt $ fromInteger val'
        _ -> BasicNA
     |typeOf val == typeOf (4 :: Float) = case cast val of
        Just val' -> BasicDouble val'
@@ -39,15 +44,16 @@ instance Entry BasicEntry where
        Just val' -> BasicDouble val'
        _ -> BasicNA
     |typeOf val == typeOf ((4 :: Int) % (4 :: Int)) = case cast val of
-       Just val' -> BasicRatio val'
+       Just val' -> BasicRatio $ (fromInteger . numerator) val' %
+         (fromInteger . denominator) val'
        _ -> BasicNA
     |typeOf val == typeOf ((4 :: Integer) % (4 :: Integer)) = case cast val of
        Just val' -> BasicRatio val'
        _ -> BasicNA
     |typeOf val == typeOf "check" = case cast val of
-       Just val' -> BasicString val'
+       Just val' -> BasicString $ Text.pack val'
        _ -> BasicNA
-    |typeOf val == (typeOf . Text.pack) "check" = case cast val of
+    |typeOf val == typeOf Text.empty = case cast val of
        Just val' -> BasicString val'
        _ -> BasicNA
     |typeOf val == typeOf True = case cast val of
