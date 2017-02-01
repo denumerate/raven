@@ -4,7 +4,8 @@ module Raven.Data.Entry
   , dumpEntry
   , isNA
   , BasicEntry
-  , BasicUnboundEntry) where
+  , BasicUnboundEntry
+  ) where
 
 import Data.Ratio
 import qualified Data.Text as Text
