@@ -20,10 +20,12 @@ executable raven
   main-is:             Main.hs
   other-modules:       Raven.REPL
                        Raven.Data.Entry
+                       Raven.Data.Table
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10
                      , hint
                      , exceptions
                      , text
+                     , vector
   hs-source-dirs:      src
   default-language:    Haskell2010
