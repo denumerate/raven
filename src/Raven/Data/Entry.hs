@@ -62,12 +62,14 @@ instance Entry BasicEntry where
        Just val' -> BasicBool val'
        _ -> BasicNA
     |otherwise = BasicNA
+    
   dumpEntry (BasicInt val) = cast val
   dumpEntry (BasicDouble val) = cast val
   dumpEntry (BasicRatio val) = cast val
   dumpEntry (BasicString val) = cast val
   dumpEntry (BasicBool val) = cast val
   dumpEntry BasicNA = Nothing
+  
   isNA BasicNA = True
   isNA _ = False
 
@@ -110,11 +112,13 @@ instance Entry BasicUnboundEntry where
        Just val' -> BasicUnboundBool val'
        _ -> BasicUnboundNA
     |otherwise = BasicUnboundNA
+    
   dumpEntry (BasicUnboundInt val) = cast val
   dumpEntry (BasicUnboundDouble val) = cast val
   dumpEntry (BasicUnboundRatio val) = cast val
   dumpEntry (BasicUnboundString val) = cast val
   dumpEntry (BasicUnboundBool val) = cast val
   dumpEntry BasicUnboundNA = Nothing
+  
   isNA BasicUnboundNA = True
   isNA _ = False
