@@ -20,7 +20,7 @@ import GHC.Float
 -- and can be checked for with the isNA predicate
 class Entry a where
   buildEntry :: (Typeable b) => b -> a
-  dumpEntry :: (Typeable b) => a -> b
+  dumpEntry :: (Typeable b) => a -> Maybe b
   isNA :: a -> Bool
 
 -- |BasicEntry creates a simple entry with bounded values
@@ -62,7 +62,14 @@ instance Entry BasicEntry where
        Just val' -> BasicBool val'
        _ -> BasicNA
     |otherwise = BasicNA
-  dumpEntry (BasicInt val) = val
+  dumpEntry (BasicInt val) = cast val
+  dumpEntry (BasicDouble val) = cast val
+  dumpEntry (BasicRatio val) = cast val
+  dumpEntry (BasicString val) = cast val
+  dumpEntry (BasicBool val) = cast val
+  dumpEntry BasicNA = Nothing
+  isNA BasicNA = True
+  isNA _ = False
 
 -- | BasicUnboundEntry creates a simple entry with unbounded values
 data BasicUnboundEntry = BasicUnboundInt Integer
