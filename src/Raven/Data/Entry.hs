@@ -110,3 +110,11 @@ instance Entry BasicUnboundEntry where
        Just val' -> BasicUnboundBool val'
        _ -> BasicUnboundNA
     |otherwise = BasicUnboundNA
+  dumpEntry (BasicUnboundInt val) = cast val
+  dumpEntry (BasicUnboundDouble val) = cast val
+  dumpEntry (BasicUnboundRatio val) = cast val
+  dumpEntry (BasicUnboundString val) = cast val
+  dumpEntry (BasicUnboundBool val) = cast val
+  dumpEntry BasicUnboundNA = Nothing
+  isNA BasicUnboundNA = True
+  isNA _ = False
