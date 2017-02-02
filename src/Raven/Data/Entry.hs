@@ -97,11 +97,10 @@ instance Entry BasicUnboundEntry where
        Just val' -> BasicUnboundDouble val'
        _ -> BasicUnboundNA
     |typeOf val == typeOf ((4 :: Int) % (4 :: Int)) = case cast val of
-       Just val' -> BasicUnboundRatio val'
+       Just val' -> BasicUnboundRatio $ ()
        _ -> BasicUnboundNA
     |typeOf val == typeOf ((4 :: Integer) % (4 :: Integer)) = case cast val of
-       Just val' -> BasicUnboundRatio $ (fromIntegral . numerator) val' %
-         (fromIntegral . denominator) val'
+       Just val' -> BasicUnboundRatio val'
        _ -> BasicUnboundNA
     |typeOf val == typeOf "check" = case cast val of
        Just val' -> BasicUnboundString $ Text.pack val'
