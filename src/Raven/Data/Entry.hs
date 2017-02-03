@@ -63,14 +63,14 @@ instance Entry BasicEntry where
        Just val' -> BasicBool val'
        _ -> BasicNA
     |otherwise = BasicNA
-    
+
   dumpEntry (BasicInt val) = cast val
   dumpEntry (BasicDouble val) = cast val
   dumpEntry (BasicRatio val) = cast val
   dumpEntry (BasicString val) = cast val
   dumpEntry (BasicBool val) = cast val
   dumpEntry BasicNA = Nothing
-  
+
   isNA BasicNA = True
   isNA _ = False
 
@@ -84,7 +84,7 @@ data BasicUnboundEntry = BasicUnboundInt Integer
 
 instance Entry BasicUnboundEntry where
   buildEntry val
-    |typeOf val == typeOf (4 :: Int) = case cast val of
+    |typeOf val == typeOf (4 :: Int) = case (cast val :: Maybe Int) of
        Just val' -> BasicUnboundInt $ fromIntegral val'
        _ -> BasicUnboundNA
     |typeOf val == typeOf (4 :: Integer) = case cast val of
@@ -96,9 +96,11 @@ instance Entry BasicUnboundEntry where
     |typeOf val == typeOf (4 :: Double) = case cast val of
        Just val' -> BasicUnboundDouble val'
        _ -> BasicUnboundNA
-    |typeOf val == typeOf ((4 :: Int) % (4 :: Int)) = case cast val of
-       Just val' -> BasicUnboundRatio $ ()
-       _ -> BasicUnboundNA
+    |typeOf val == typeOf ((4 :: Int) % (4 :: Int)) =
+       case (cast val :: Maybe (Ratio Int)) of
+         Just val' -> BasicUnboundRatio $ (fromIntegral . numerator) val' %
+           (fromIntegral . denominator) val'
+         _ -> BasicUnboundNA
     |typeOf val == typeOf ((4 :: Integer) % (4 :: Integer)) = case cast val of
        Just val' -> BasicUnboundRatio val'
        _ -> BasicUnboundNA
@@ -112,13 +114,13 @@ instance Entry BasicUnboundEntry where
        Just val' -> BasicUnboundBool val'
        _ -> BasicUnboundNA
     |otherwise = BasicUnboundNA
-    
+
   dumpEntry (BasicUnboundInt val) = cast val
   dumpEntry (BasicUnboundDouble val) = cast val
   dumpEntry (BasicUnboundRatio val) = cast val
   dumpEntry (BasicUnboundString val) = cast val
   dumpEntry (BasicUnboundBool val) = cast val
   dumpEntry BasicUnboundNA = Nothing
-  
+
   isNA BasicUnboundNA = True
   isNA _ = False
