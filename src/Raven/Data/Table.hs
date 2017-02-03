@@ -40,12 +40,14 @@ buildTable titles vectors
   |otherwise = Right "Number of titles does not match number of columns"
 
 -- |Pulls a column from the table by column index
+-- O(1)
 getColByIndex :: Table a -> Int -> Either (Vector a) Error
 getColByIndex (Table _ tab) ind = case tab V.!? ind of
   Just vec -> Left vec
   _ -> Right "Index out of bounds"
 
 -- |Pulls a column from the table by title
+-- O(n) where n is the number of columns
 getColByTitle :: Table a -> Text -> Either (Vector a) Error
 getColByTitle tab@(Table ttls _) ttl = case V.findIndex (\val -> val == ttl) ttls of
   Just ind -> getColByIndex tab ind

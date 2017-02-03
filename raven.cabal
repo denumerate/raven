@@ -42,5 +42,6 @@ Test-suite test-table
                      , HUnit
                      , vector >= 0.11
                      , raven
+                     , text >= 1.2
   hs-source-dirs:      src/Raven/Data
   default-language:    Haskell2010
