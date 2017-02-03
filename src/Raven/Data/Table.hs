@@ -2,6 +2,7 @@
 module Raven.Data.Table
   ( Titles
   , Table
+  , Error
   , empty
   , buildTable
   , getColByIndex
@@ -19,6 +20,7 @@ import Data.Text (Text)
 -- Titles are column titles
 type Titles = Vector Text
 data Table a = Table Titles (Vector (Vector a))
+  deriving(Eq, Show)
 
 type Error = Text
 
