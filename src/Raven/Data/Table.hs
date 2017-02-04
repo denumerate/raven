@@ -3,6 +3,7 @@ module Raven.Data.Table
   ( Titles
   , Table
   , Error
+  , Raven.Data.Table.null
   , empty
   , buildTable
   , getColByIndex
@@ -33,6 +34,8 @@ empty = Table V.empty V.empty
 -- or there are not the same number of titles as
 buildTable :: Titles -> Vector (Vector a) -> Either (Table a) Error
 buildTable titles vectors
+  |V.null titles && V.null vectors = Left empty
+  |V.null titles || V.null vectors = Right "Number of titles does not match number of columns"
   |V.length titles == V.length vectors =
      if all (\vec -> V.length vec == (V.length . V.head) vectors) $ V.tail vectors
         then Left $ Table titles vectors
@@ -56,7 +59,12 @@ getColByTitle tab@(Table ttls _) ttl = case V.findIndex (\val -> val == ttl) ttl
 -- |Adds a column to the end
 -- O(n) where n is the number of columns
 addColumn :: Table a -> Text -> Vector a -> Either (Table a) Error
-addColumn (Table ttls tab) ttl vec
+addColumn t@(Table ttls tab) ttl vec
+  |Raven.Data.Table.null t = buildTable (V.fromList [ttl]) (V.fromList [vec])
   |(V.length . V.head) tab == V.length vec =
      Left $ Table (V.snoc ttls ttl) (V.snoc tab vec)
   |otherwise = Right "Vector wrong length"
+
+-- |Test if a table is empty O(1)
+null :: Table a -> Bool
+null (Table ttls _) = V.null ttls

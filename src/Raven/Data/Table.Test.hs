@@ -52,6 +52,9 @@ createtest3 f = map (\(s,w,x,y,z) -> (s,TestCase $ z @=? f w x y))
 --Test values:
 titleError = Right "Number of titles does not match number of columns"
 colLengthError = Right "Not all columns the same length"
+indError = Right "Index out of bounds"
+ttlError = Right "Column title not found"
+addError = Right "Vector wrong length"
 
 single = V.fromList [V.fromList [1]]
 
@@ -71,6 +74,39 @@ test3 = V.fromList
   , V.fromList [7]
   ]
 
+single' = buildTable (V.fromList ["1"]) single
+
+table1 = buildTable (V.fromList ["1","2","3"])
+  (V.fromList
+    [ V.fromList [1,2,3]
+    , V.fromList [4,5,6]
+    , V.fromList [7,8,9]
+    ])
+
+table2 = buildTable (V.fromList ["1","s"])
+  (V.fromList
+    [ V.fromList [1]
+    , V.fromList [0]
+    ])
+
+table3 = buildTable (V.fromList ["1","2","3","r"])
+  (V.fromList
+    [ V.fromList [1,2,3]
+    , V.fromList [4,5,6]
+    , V.fromList [7,8,9]
+    , V.fromList [0,0,0]
+    ])
+
+table4 = buildTable (V.fromList ["4"])
+  (V.fromList [V.fromList [6,7]])
+
+table5 = buildTable (V.fromList ["kdj"])
+  (V.fromList [V.empty])
+
+unpackTable :: Either (Table a) Error -> Table a
+unpackTable t = let Left t' = t
+                in t'
+
 buildTableData :: [(String, Titles, Vector (Vector Int), Either (Table a) Error)]
 buildTableData =
   [ ("buildTable: empty",V.empty,V.empty,Left empty)
@@ -85,12 +121,38 @@ buildTableData =
 
 getColByIndexData :: [(String, Table Int, Int, Either (Vector Int) Error)]
 getColByIndexData =
-  []
+  [ ("getColByIndex: empty",empty,0,indError)
+  , ("getColByIndex: empty 1",empty,-4,indError)
+  , ("getColByIndex: empty 2",empty,5,indError)
+  , ("getColByIndex: index error",unpackTable single',-1,indError)
+  , ("getColByIndex: index error 1",unpackTable single',1,indError)
+  , ("getColByIndex: index error 2",unpackTable table1, -1,indError)
+  , ("getColByIndex: index error 3",unpackTable table1,3,indError)
+  , ("getColByIndex: single",unpackTable single',0,Left $ V.fromList [1])
+  , ("getColByIndex: norm",unpackTable table1,0,Left $ V.fromList [1,2,3])
+  , ("getColByIndex: norm 1",unpackTable table1,2,Left $ V.fromList [7,8,9])
+  ]
 
 getColByTitleData :: [(String, Table Int, Text, Either (Vector Int) Error)]
 getColByTitleData =
-  []
+  [ ("getColByTitle: empty",empty,"skjfs",ttlError)
+  , ("getColByTitle: title error",unpackTable table1,"sldkfj",ttlError)
+  , ("getColByTitle: single",unpackTable single',"1",Left $ V.fromList [1])
+  , ("getColByTitle: norm",unpackTable table1,"2",Left $ V.fromList [4,5,6])
+  , ("getColByTitle: norm 1",unpackTable table1,"3",Left $ V.fromList [7,8,9])
+  ]
 
 addColumnData :: [(String, Table Int, Text, Vector Int, Either (Table Int) Error)]
 addColumnData =
-  []
+  [ ("addColumn: empty",empty,"4",V.fromList [6,7],table4)
+  , ("addColumn: empty 1",empty,"kdj",V.empty,table5)
+  , ("addColumn: size error",unpackTable single',"k",V.empty,addError)
+  , ("addColumn: size error 1",unpackTable table1,"d",V.fromList [2,4],
+     addError)
+  , ("addColumn: size error 2",unpackTable table1,"e",V.fromList [3,4,5,6],
+     addError)
+  , ("addColumn: single",unpackTable single',"s",V.fromList [0],
+     Left $ unpackTable table2)
+  , ("addColumn: norm",unpackTable table1,"r",V.fromList [0,0,0],
+     Left $ unpackTable table3)
+  ]
