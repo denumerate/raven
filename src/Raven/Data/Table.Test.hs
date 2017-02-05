@@ -183,4 +183,9 @@ dropColByIndexData =
 
 dropColByTitleData :: [(String, Table Int, Text, Either (Table Int) Error)]
 dropColByTitleData =
-  []
+  [ ("dropColByTitle: empty",empty,"sldkfj",ttlError)
+  , ("dropColByTitle: title error",unpackTable table1,"sldkfj",ttlError)
+  , ("dropColByTitle: single",unpackTable single',"1",Left empty)
+  , ("dropColByTitle: norm",unpackTable table1,"1",table6)
+  , ("dropColByTitle: norm 1",unpackTable table1,"3",table7)
+  ]
