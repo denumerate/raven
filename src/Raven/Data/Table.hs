@@ -18,11 +18,12 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Data.Text (Text)
 
+type Titles = Vector Text
+
 -- |Table is the simplest possible implementation
 -- Typeclass requirements w/in functions
 -- Insures that all vectors are the same length
 -- Titles are column titles
-type Titles = Vector Text
 data Table a = Table Titles (Vector (Vector a))
   deriving(Eq, Show)
 
