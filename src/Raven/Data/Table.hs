@@ -20,9 +20,8 @@ import Data.Text (Text)
 
 type Titles = Vector Text
 
--- |Table is the simplest possible implementation
--- Typeclass requirements w/in functions
--- Insures that all vectors are the same length
+-- |Table is the simplest possible implementation.
+-- Insures that all vectors are the same length.
 -- Titles are column titles
 data Table a = Table Titles (Vector (Vector a))
   deriving(Eq, Show)
@@ -50,7 +49,7 @@ empty :: Table a
 empty = Table V.empty V.empty
 
 -- |Build a table from Vectors
--- Fails if all the vectors are not the same length
+-- Fails if all the vectors are not the same length.
 -- or there are not the same number of titles as
 buildTable :: Titles -> Vector (Vector a) -> Either (Table a) Error
 buildTable titles vectors
@@ -69,14 +68,14 @@ getColByIndex (Table _ tab) ind = case tab V.!? ind of
   Just vec -> Left vec
   _ -> Right outOfBoundsError
 
--- |Pulls a column from the table by title
+-- |Pulls a column from the table by title.
 -- O(n) where n is the number of columns
 getColByTitle :: Table a -> Text -> Either (Vector a) Error
 getColByTitle tab@(Table ttls _) ttl = case V.findIndex (\val -> val == ttl) ttls of
   Just ind -> getColByIndex tab ind
   _ -> Right titleNotFoundError
 
--- |Adds a column to the end
+-- |Adds a column to the end.
 -- O(n) where n is the number of columns
 addColumn :: Table a -> Text -> Vector a -> Either (Table a) Error
 addColumn t@(Table ttls tab) ttl vec
@@ -93,8 +92,8 @@ null (Table ttls _) = V.null ttls
 nCols :: Table a -> Int
 nCols (Table ttls _) = V.length ttls
 
--- |Removes a single column from a table
--- O(n) where n is the number of columns
+-- |Removes a single column from a table.
+-- O(n) where n is the number of columns.
 dropColByIndex :: Table a -> Int -> Either (Table a) Error
 dropColByIndex t@(Table ttls cols) ind
   |ind < 0 ||
@@ -104,11 +103,33 @@ dropColByIndex t@(Table ttls cols) ind
   where
     ipred i _ = i /= ind
 
--- |Removes a single column from a table
--- O(n) where n is the number of columns
--- approximately twice as slow as by index
+-- |Removes a single column from a table.
+-- O(n) where n is the number of columns.
+-- approximately twice as slow as by index.
 dropColByTitle :: Table a -> Text -> Either (Table a) Error
 dropColByTitle t@(Table ttls _) ttl =
   case V.findIndex (\val -> val == ttl) ttls of
     Just ind -> dropColByIndex t ind
     _ -> Right titleNotFoundError
+
+-- |takes a list of indices and filters out the associated columns.
+-- Does not return an error if an index is missing.
+-- O(mn) where n is the number of columns and m is the number of indices.
+dropColsByIndex :: Table a -> [Int] -> Table a
+dropColsByIndex (Table ttls cols) inds =
+  Table (V.ifilter ipred ttls) (V.ifilter ipred cols)
+  where
+    ipred i _ = elem i inds
+
+-- |takes a list of indices and filters out the associated columns.
+-- Does return an error if an index is missing.
+-- O(mn) where n is the number of columns and m is the number in indices
+dropColsByIndex' :: Table a -> [Int] -> Either (Table a) Error
+dropColsByIndex' t inds
+  |all (\i -> i >= 0 && i < nCols t) inds = Left $ dropColsByIndex t inds
+  |otherwise = Right outOfBoundsError
+
+-- |takes a list of title and filters out the associated columns.
+-- Does not return an error if a title is missing
+dropColsByTitle :: Table a -> [Text] -> Table a
+dropColsByTitle
