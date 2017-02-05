@@ -23,6 +23,8 @@ allTests = TestList $
   ++ runtests2 getColByIndex getColByIndexData
   ++ runtests2 getColByTitle getColByTitleData
   ++ runtests3 addColumn addColumnData
+  ++ runtests2 dropColByIndex dropColByIndexData
+  ++ runtests2 dropColByTitle dropColByTitleData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -156,3 +158,11 @@ addColumnData =
   , ("addColumn: norm",unpackTable table1,"r",V.fromList [0,0,0],
      Left $ unpackTable table3)
   ]
+
+dropColByIndexData :: [(String, Table Int, Int, Either (Table Int) Error)]
+dropColByIndexData =
+  []
+
+dropColByTitleData :: [(String, Table Int, Text, Either (Table Int) Error)]
+dropColByTitleData =
+  []

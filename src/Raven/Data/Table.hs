@@ -4,11 +4,14 @@ module Raven.Data.Table
   , Table
   , Error
   , Raven.Data.Table.null
+  , nCols
   , empty
   , buildTable
   , getColByIndex
   , getColByTitle
   , addColumn
+  , dropColByIndex
+  , dropColByTitle
   ) where
 
 import Data.Vector (Vector)
@@ -68,3 +71,27 @@ addColumn t@(Table ttls tab) ttl vec
 -- |Test if a table is empty O(1)
 null :: Table a -> Bool
 null (Table ttls _) = V.null ttls
+
+-- |Returns the number of columns in a table O(1)
+nCols :: Table a -> Int
+nCols (Table ttls _) = V.length ttls
+
+-- |Removes a single column from a table
+-- O(n) where n is the number of columns
+dropColByIndex :: Table a -> Int -> Either (Table a) Error
+dropColByIndex t@(Table ttls cols) ind
+  |ind < 0 ||
+   ind >= nCols t ||
+   Raven.Data.Table.null t = Right "Index out of bounds"
+  |otherwise = Left $ Table (V.ifilter ipred ttls) (V.ifilter ipred cols)
+  where
+    ipred i _ = i /= ind
+
+-- |Removes a single column from a table
+-- O(n) where n is the number of columns
+-- approximately twice as slow as by index
+dropColByTitle :: Table a -> Text -> Either (Table a) Error
+dropColByTitle t@(Table ttls _) ttl =
+  case V.findIndex (\val -> val == ttl) ttls of
+    Just ind -> dropColByIndex t ind
+    _ -> Right "Column title not found"
