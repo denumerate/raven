@@ -105,6 +105,18 @@ table4 = buildTable (V.fromList ["4"])
 table5 = buildTable (V.fromList ["kdj"])
   (V.fromList [V.empty])
 
+table6 = buildTable (V.fromList ["2","3"])
+  (V.fromList
+    [ V.fromList [4,5,6]
+    , V.fromList [7,8,9]
+    ])
+
+table7 = buildTable (V.fromList ["1","2"])
+  (V.fromList
+    [ V.fromList [1,2,3]
+    , V.fromList [4,5,6]
+    ])
+
 unpackTable :: Either (Table a) Error -> Table a
 unpackTable t = let Left t' = t
                 in t'
@@ -161,7 +173,13 @@ addColumnData =
 
 dropColByIndexData :: [(String, Table Int, Int, Either (Table Int) Error)]
 dropColByIndexData =
-  []
+  [ ("dropColByIndex: empty",empty,0,indError)
+  , ("dropColByIndex: index error",unpackTable table1,-1,indError)
+  , ("dropColByIndex: index error 1",unpackTable table1,3,indError)
+  , ("dropColByIndex: single",unpackTable single',0,Left empty)
+  , ("dropColByIndex: norm",unpackTable table1,0,table6)
+  , ("dropColByIndex: norm 1",unpackTable table1,2,table7)
+  ]
 
 dropColByTitleData :: [(String, Table Int, Text, Either (Table Int) Error)]
 dropColByTitleData =
