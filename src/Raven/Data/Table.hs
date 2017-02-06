@@ -12,6 +12,10 @@ module Raven.Data.Table
   , addColumn
   , dropColByIndex
   , dropColByTitle
+  , dropColsByIndex
+  , dropColsByIndex'
+  , dropColsByTitle
+  , dropColsByTitle'
   ) where
 
 import Data.Vector (Vector)
@@ -130,6 +134,21 @@ dropColsByIndex' t inds
   |otherwise = Right outOfBoundsError
 
 -- |takes a list of title and filters out the associated columns.
--- Does not return an error if a title is missing
+-- Does not return an error if a title is missing.
+-- O(mn) where n is the number of columns and m is the number ttls looked forces.
+-- Consistently slower than Indices version
 dropColsByTitle :: Table a -> [Text] -> Table a
-dropColsByTitle
+dropColsByTitle t@(Table ttls _) ttls' =
+  dropColsByIndex t $ V.toList $
+  V.findIndices  (`elem` ttls') ttls
+
+-- |takes a list of title and filters out the associated columns.
+-- Does return an error if a title is missing.
+-- O(mn) where n is the number of columns and m is the number ttls looked forces.
+-- Consistently slower than Indices version
+dropColsByTitle' :: Table a -> [Text] -> Either (Table a) Error
+dropColsByTitle' t@(Table ttls _) ttls' =
+  let inds = V.toList $ V.findIndices  (`elem` ttls') ttls
+  in if length ttls == length inds
+     then Left $ dropColsByIndex t inds
+     else Right $ titleNotFoundError
