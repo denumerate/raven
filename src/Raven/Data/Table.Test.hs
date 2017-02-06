@@ -29,7 +29,9 @@ allTests = TestList $
   ++ runtests2 dropColsByIndex' dropColsByIndex'Data
   ++ runtests2 dropColsByTitle dropColsByTitleData
   ++ runtests2 dropColsByTitle' dropColsByTitle'Data
-  ++ runtests2 combineTableCols combineTableColsData
+  ++ runtests2 combineTableByCols combineTableByColsData
+  ++ runtests2 takeRows takeRowsData
+  ++ runtests2 dropRows dropRowsData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -298,15 +300,23 @@ dropColsByTitle'Data =
   , ("dropColsByTitle': norm 7",unpackTable table1, [], table1)
   ]
 
-combineTableColsData :: [(String, Table Int, Table Int, Either (Table Int) Error)]
-combineTableColsData =
-  [ ("combineTableCols: empty",empty,empty,Left empty)
-  , ("combineTableCols: empty 1",empty,unpackTable table1,nRowsError)
-  , ("combineTableCols: empty 2",unpackTable table3,empty,nRowsError)
-  , ("combineTableCols: error",unpackTable table1,unpackTable single',
+combineTableByColsData :: [(String, Table Int, Table Int, Either (Table Int) Error)]
+combineTableByColsData =
+  [ ("combineTableByCols: empty",empty,empty,Left empty)
+  , ("combineTableByCols: empty 1",empty,unpackTable table1,nRowsError)
+  , ("combineTableByCols: empty 2",unpackTable table3,empty,nRowsError)
+  , ("combineTableByCols: error",unpackTable table1,unpackTable single',
     nRowsError)
-  , ("combineTableCols: norm",unpackTable table1,unpackTable table7,
+  , ("combineTableByCols: norm",unpackTable table1,unpackTable table7,
     table9)
-  , ("combineTableCols: norm 1",unpackTable table6, unpackTable table1,
+  , ("combineTableByCols: norm 1",unpackTable table6, unpackTable table1,
     table10)
   ]
+
+takeRowsData :: [(String,Table Int,Int,Table Int)]
+takeRowsData =
+  []
+
+dropRowsData :: [(String,Table Int,Int,Table Int)]
+dropRowsData =
+  []

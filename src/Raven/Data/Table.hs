@@ -16,7 +16,9 @@ module Raven.Data.Table
   , dropColsByIndex'
   , dropColsByTitle
   , dropColsByTitle'
-  , combineTableCols
+  , combineTableByCols
+  , takeRows
+  , dropRows
   ) where
 
 import Data.Vector (Vector)
@@ -166,7 +168,19 @@ dropColsByTitle' t@(Table ttls _) ttls' =
 -- |combines two table by concatenating their columns.
 -- Returns an error if both columns do not have the same number of rows.
 -- O(m+n) where m and n are the number of columns in each table
-combineTableCols :: Table a -> Table a -> Either (Table a) Error
-combineTableCols tA@(Table ttlsA colsA) tB@(Table ttlsB colsB)
+combineTableByCols :: Table a -> Table a -> Either (Table a) Error
+combineTableByCols tA@(Table ttlsA colsA) tB@(Table ttlsB colsB)
   |nRows tA == nRows tB = Left $ Table (ttlsA V.++ ttlsB) (colsA V.++ colsB)
   |otherwise = Right nRowsError
+
+-- |Drops the first n rows from a table
+-- O(n) where n is the number of columns
+dropRows :: Table a -> Int -> Table a
+dropRows (Table ttls cols) rows = Table ttls $
+  V.map (rows `V.drop`) cols
+
+-- |Takes the first n rows from a table
+-- O(n) where n is the number of columns
+takeRows :: Table a -> Int -> Table a
+takeRows (Table ttls cols) rows = Table ttls $
+  V.map (rows `V.take`) cols
