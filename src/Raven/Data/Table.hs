@@ -16,6 +16,7 @@ module Raven.Data.Table
   , dropColsByIndex'
   , dropColsByTitle
   , dropColsByTitle'
+  , combineTableCols
   ) where
 
 import Data.Vector (Vector)
@@ -47,6 +48,9 @@ titleNotFoundError = "Column title not found"
 
 vectorLengthError :: Text
 vectorLengthError = "Vector wrong length"
+
+nRowsError :: Text
+nRowsError = "Tables must have equal number of rows"
 
 -- |Create an empty table
 empty :: Table a
@@ -95,6 +99,12 @@ null (Table ttls _) = V.null ttls
 -- |Returns the number of columns in a table O(1)
 nCols :: Table a -> Int
 nCols (Table ttls _) = V.length ttls
+
+-- |Returns the number of rows in a table O(1)
+nRows :: Table a -> Int
+nRows t@(Table _ cols)
+  |Raven.Data.Table.null t = 0
+  |otherwise = (V.length . V.head) cols
 
 -- |Removes a single column from a table.
 -- O(n) where n is the number of columns.
@@ -152,3 +162,11 @@ dropColsByTitle' t@(Table ttls _) ttls' =
   in if length ttls' == length inds
      then Left $ dropColsByIndex t inds
      else Right $ titleNotFoundError
+
+-- |combines two table by concatenating their columns.
+-- Returns an error if both columns do not have the same number of rows.
+-- O(m+n) where m and n are the number of columns in each table
+combineTableCols :: Table a -> Table a -> Either (Table a) Error
+combineTableCols tA@(Table ttlsA colsA) tB@(Table ttlsB colsB)
+  |nRows tA == nRows tB = Left $ Table (ttlsA V.++ ttlsB) (colsA V.++ colsB)
+  |otherwise = Right nRowsError

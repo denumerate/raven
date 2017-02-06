@@ -29,6 +29,7 @@ allTests = TestList $
   ++ runtests2 dropColsByIndex' dropColsByIndex'Data
   ++ runtests2 dropColsByTitle dropColsByTitleData
   ++ runtests2 dropColsByTitle' dropColsByTitle'Data
+  ++ runtests2 combineTableCols combineTableColsData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -61,6 +62,7 @@ colLengthError = Right "Not all columns the same length"
 indError = Right "Index out of bounds"
 ttlError = Right "Column title not found"
 addError = Right "Vector wrong length"
+nRowsError = Right "Tables must have equal number of rows"
 
 single = V.fromList [V.fromList [1]]
 
@@ -124,6 +126,24 @@ table7 = buildTable (V.fromList ["1","2"])
 table8 = buildTable (V.fromList ["2"])
   (V.fromList
     [ V.fromList [4,5,6]
+    ])
+
+table9 = buildTable (V.fromList ["1","2","3","1","2"])
+  (V.fromList
+    [ V.fromList [1,2,3]
+    , V.fromList [4,5,6]
+    , V.fromList [7,8,9]
+    , V.fromList [1,2,3]
+    , V.fromList [4,5,6]
+    ])
+
+table10 = buildTable (V.fromList ["2","3","1","2","3"])
+  (V.fromList
+    [ V.fromList [4,5,6]
+    , V.fromList [7,8,9]
+    , V.fromList [1,2,3]
+    , V.fromList [4,5,6]
+    , V.fromList [7,8,9]
     ])
 
 unpackTable :: Either (Table a) Error -> Table a
@@ -276,4 +296,17 @@ dropColsByTitle'Data =
   , ("dropColsByTitle': norm 6",unpackTable table1, ["3","1","g"],
      ttlError)
   , ("dropColsByTitle': norm 7",unpackTable table1, [], table1)
+  ]
+
+combineTableColsData :: [(String, Table Int, Table Int, Either (Table Int) Error)]
+combineTableColsData =
+  [ ("combineTableCols: empty",empty,empty,Left empty)
+  , ("combineTableCols: empty 1",empty,unpackTable table1,nRowsError)
+  , ("combineTableCols: empty 2",unpackTable table3,empty,nRowsError)
+  , ("combineTableCols: error",unpackTable table1,unpackTable single',
+    nRowsError)
+  , ("combineTableCols: norm",unpackTable table1,unpackTable table7,
+    table9)
+  , ("combineTableCols: norm 1",unpackTable table6, unpackTable table1,
+    table10)
   ]
