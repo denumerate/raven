@@ -123,7 +123,7 @@ dropColsByIndex :: Table a -> [Int] -> Table a
 dropColsByIndex (Table ttls cols) inds =
   Table (V.ifilter ipred ttls) (V.ifilter ipred cols)
   where
-    ipred i _ = elem i inds
+    ipred i _ = not $ elem i inds
 
 -- |takes a list of indices and filters out the associated columns.
 -- Does return an error if an index is missing.
@@ -149,6 +149,6 @@ dropColsByTitle t@(Table ttls _) ttls' =
 dropColsByTitle' :: Table a -> [Text] -> Either (Table a) Error
 dropColsByTitle' t@(Table ttls _) ttls' =
   let inds = V.toList $ V.findIndices  (`elem` ttls') ttls
-  in if length ttls == length inds
+  in if length ttls' == length inds
      then Left $ dropColsByIndex t inds
      else Right $ titleNotFoundError
