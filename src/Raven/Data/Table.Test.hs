@@ -121,6 +121,11 @@ table7 = buildTable (V.fromList ["1","2"])
     , V.fromList [4,5,6]
     ])
 
+table8 = buildTable (V.fromList ["2"])
+  (V.fromList
+    [ V.fromList [4,5,6]
+    ])
+
 unpackTable :: Either (Table a) Error -> Table a
 unpackTable t = let Left t' = t
                 in t'
@@ -196,16 +201,79 @@ dropColByTitleData =
 
 dropColsByIndexData :: [(String, Table Int, [Int], Table Int)]
 dropColsByIndexData =
-  []
+  [ ("dropColsByIndex: empty", empty, [], empty)
+  , ("dropColsByIndex: empty 1", empty, [-1,0,2], empty)
+  , ("dropColsByIndex: single",unpackTable single', [0], empty)
+  , ("dropColsByIndex: single 1",unpackTable single', [-1,0,2], empty)
+  , ("dropColsByIndex: single 2",unpackTable single',[-1,1,2],unpackTable single')
+  , ("dropColsByIndex: single 3",unpackTable single',[],unpackTable single')
+  , ("dropColsByIndex: norm",unpackTable table1,[-1,3,4],unpackTable table1)
+  , ("dropColsByIndex: norm 1",unpackTable table1,[0..2],empty)
+  , ("dropColsByIndex: norm 2",unpackTable table1,[0..4],empty)
+  , ("dropColsByIndex: norm 3",unpackTable table1, [0], unpackTable table6)
+  , ("dropColsByIndex: norm 4",unpackTable table1, [0,4], unpackTable table6)
+  , ("dropColsByIndex: norm 5",unpackTable table1, [0,2],unpackTable table8)
+  , ("dropColsByIndex: norm 6",unpackTable table1, [0,2,3],unpackTable table8)
+  , ("dropColsByIndex: norm 7",unpackTable table1, [],unpackTable table1)
+  ]
 
 dropColsByIndex'Data :: [(String, Table Int, [Int], Either (Table Int) Error)]
 dropColsByIndex'Data =
-  []
+  [ ("dropColsByIndex: empty", empty, [], Left empty)
+  , ("dropColsByIndex: empty 1", empty, [-1,0,2], indError)
+  , ("dropColsByIndex: single",unpackTable single', [0],Left empty)
+  , ("dropColsByIndex: single 1",unpackTable single', [-1,0,2], indError)
+  , ("dropColsByIndex: single 2",unpackTable single',[-1,1,2],indError)
+  , ("dropColsByIndex: single 3",unpackTable single',[],single')
+  , ("dropColsByIndex: norm",unpackTable table1,[-1,3,4],indError)
+  , ("dropColsByIndex: norm 1",unpackTable table1,[0..2],Left empty)
+  , ("dropColsByIndex: norm 2",unpackTable table1,[0..4],indError)
+  , ("dropColsByIndex: norm 3",unpackTable table1, [0], table6)
+  , ("dropColsByIndex: norm 4",unpackTable table1, [0,4], indError)
+  , ("dropColsByIndex: norm 5",unpackTable table1, [2,0], table8)
+  , ("dropColsByIndex: norm 6",unpackTable table1, [0,2,3],indError)
+  , ("dropColsByIndex: norm 7",unpackTable table1, [], table1)
+  ]
 
 dropColsByTitleData :: [(String, Table Int, [Text], Table Int)]
 dropColsByTitleData =
-  []
+  [ ("dropColsByIndex: empty", empty, [], empty)
+  , ("dropColsByIndex: empty 1", empty, ["1","3","dk"], empty)
+  , ("dropColsByIndex: single",unpackTable single', ["1"], empty)
+  , ("dropColsByIndex: single 1",unpackTable single', ["1","3","dk"], empty)
+  , ("dropColsByIndex: single 2",unpackTable single', ["-1","3","dk"],
+     unpackTable single')
+  , ("dropColsByIndex: single 3",unpackTable single',[],unpackTable single')
+  , ("dropColsByIndex: norm",unpackTable table1,["0","4","sdk"],
+     unpackTable table1)
+  , ("dropColsByIndex: norm 1",unpackTable table1,["1","2","3"],empty)
+  , ("dropColsByIndex: norm 2",unpackTable table1,["1","6","2","3"],empty)
+  , ("dropColsByIndex: norm 3",unpackTable table1, ["1"], unpackTable table6)
+  , ("dropColsByIndex: norm 4",unpackTable table1, ["1","t"], unpackTable table6)
+  , ("dropColsByIndex: norm 5",unpackTable table1, ["1","3"],unpackTable table8)
+  , ("dropColsByIndex: norm 6",unpackTable table1, ["3","1","g"],
+     unpackTable table8)
+  , ("dropColsByIndex: norm 7",unpackTable table1, [],unpackTable table1)
+  ]
+
 
 dropColsByTitle'Data :: [(String, Table Int, [Text], Either (Table Int) Error)]
 dropColsByTitle'Data =
-  []
+  [ ("dropColsByIndex: empty", empty, [],Left empty)
+  , ("dropColsByIndex: empty 1", empty, ["1","3","dk"], ttlError)
+  , ("dropColsByIndex: single",unpackTable single', ["1"],Left empty)
+  , ("dropColsByIndex: single 1",unpackTable single', ["1","3","dk"], ttlError)
+  , ("dropColsByIndex: single 2",unpackTable single', ["-1","3","dk"],
+     ttlError)
+  , ("dropColsByIndex: single 3",unpackTable single',[], single')
+  , ("dropColsByIndex: norm",unpackTable table1,["0","4","sdk"],
+     ttlError)
+  , ("dropColsByIndex: norm 1",unpackTable table1,["1","2","3"],Left empty)
+  , ("dropColsByIndex: norm 2",unpackTable table1,["1","6","2","3"],ttlError)
+  , ("dropColsByIndex: norm 3",unpackTable table1, ["1"], table6)
+  , ("dropColsByIndex: norm 4",unpackTable table1, ["1","t"], ttlError)
+  , ("dropColsByIndex: norm 5",unpackTable table1, ["1","3"], table8)
+  , ("dropColsByIndex: norm 6",unpackTable table1, ["3","1","g"],
+     ttlError)
+  , ("dropColsByIndex: norm 7",unpackTable table1, [], table1)
+  ]
