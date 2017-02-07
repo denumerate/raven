@@ -148,6 +148,24 @@ table10 = buildTable (V.fromList ["2","3","1","2","3"])
     , V.fromList [7,8,9]
     ])
 
+table11 = buildTable (V.fromList ["1","2","3"])
+  (V.fromList [V.empty,V.empty,V.empty])
+
+table12 = buildTable (V.fromList ["1","2","3"])
+  (V.fromList
+    [ V.fromList [1,2]
+    , V.fromList [4,5]
+    , V.fromList [7,8]
+    ])
+
+table13 = buildTable (V.fromList ["1","2","3"])
+  (V.fromList
+    [ V.fromList [3]
+    , V.fromList [6]
+    , V.fromList [9]
+    ])
+
+
 unpackTable :: Either (Table a) Error -> Table a
 unpackTable t = let Left t' = t
                 in t'
@@ -315,8 +333,22 @@ combineTableByColsData =
 
 takeRowsData :: [(String,Table Int,Int,Table Int)]
 takeRowsData =
-  []
+  [ ("takeRows: empty", empty, 0, empty)
+  , ("takeRows: empty 1", empty, 10, empty)
+  , ("takeRows: empty 2", empty, -2, empty)
+  , ("takeRows: 0",unpackTable table1,0,unpackTable table11)
+  , ("takeRows: all",unpackTable table1,3,unpackTable table1)
+  , ("takeRows: all+",unpackTable table1,4,unpackTable table1)
+  , ("takeRows: norm",unpackTable table1,2,unpackTable table12)
+  ]
 
 dropRowsData :: [(String,Table Int,Int,Table Int)]
 dropRowsData =
-  []
+  [ ("dropRows: empty", empty, 0, empty)
+  , ("dropRows: empty 1", empty, 10, empty)
+  , ("dropRows: empty 2", empty, -2, empty)
+  , ("dropRows: 0",unpackTable table1,0,unpackTable table1)
+  , ("dropRows: all",unpackTable table1,3,unpackTable table11)
+  , ("dropRows: all+",unpackTable table1,4,unpackTable table11)
+  , ("dropRows: norm",unpackTable table1,2,unpackTable table13)
+  ]
