@@ -5,6 +5,7 @@ module Raven.Data.Table
   , Error
   , Raven.Data.Table.null
   , nCols
+  , nRows
   , empty
   , buildTable
   , getColByIndex
