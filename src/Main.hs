@@ -1,6 +1,6 @@
 module Main where
 
-import Raven.REPL
+import Raven.Server
 
 main :: IO ()
-main = runREPL
+main = initServer 4444
