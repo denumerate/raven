@@ -6,33 +6,13 @@ import System.IO
 import Data.List (intercalate)
 
 -- |Interpret a string, return the result
-interp :: (MonadInterpreter m) => String -> m String
-interp input = runInterpreter initREPL >> eval input >>=
-  return
-
--- |Runs the repl, top level
-runREPL :: IO ()
-runREPL = run
-
--- |runs the repl, internal
-run :: IO ()
-run = inputREPL >>=
-  (\input -> runInterpreter $ initREPL >> evalREPL input) >>=
-  (\out -> case out of
-      Left err -> putStrLn (errorString err) >>
-        run
-      _ -> run)
-
--- |Handles input, creates interface
-inputREPL :: IO String
-inputREPL = putStr "Raven> " >>
-  hFlush stdout >>
-  getLine
-
--- | uses eval to evaluate and print output
-evalREPL :: MonadInterpreter m => String -> m ()
-evalREPL input = eval input >>=
-  (liftIO . putStrLn)
+interp :: Handle -> IO ()
+interp handle =
+  hGetLine handle >>=
+  (\line ->
+     runInterpreter (initREPL >> eval line >>=
+                     liftIO . hPutStrLn handle)) >>
+  interp handle
 
 -- | prints errors
 errorString :: InterpreterError -> String

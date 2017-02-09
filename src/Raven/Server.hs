@@ -20,6 +20,4 @@ initServer portNum = withSocketsDo $
 -- test function for init, to be replaced once I know what im doing
 parrot :: Handle -> IO ()
 parrot handle = hSetBuffering handle LineBuffering >>
-  hGetLine handle >>=
-  interp >>=
-  hPutStrLn handle
+  interp handle
