@@ -1,9 +1,14 @@
-module Raven.REPL ( runREPL
+module Raven.REPL ( interp
                   ) where
 
 import Language.Haskell.Interpreter
 import System.IO
 import Data.List (intercalate)
+
+-- |Interpret a string, return the result
+interp :: (MonadInterpreter m) => String -> m String
+interp input = runInterpreter initREPL >> eval input >>=
+  return
 
 -- |Runs the repl, top level
 runREPL :: IO ()

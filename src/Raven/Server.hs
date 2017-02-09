@@ -7,6 +7,8 @@ import System.IO
 import Control.Monad(forever)
 import Control.Concurrent(forkFinally)
 
+import Raven.REPL
+
 -- |Start the server and listen for connections at the supplied port number.
 -- Creates a new thread to handle the connection
 initServer :: Int -> IO ()
@@ -19,4 +21,5 @@ initServer portNum = withSocketsDo $
 parrot :: Handle -> IO ()
 parrot handle = hSetBuffering handle LineBuffering >>
   hGetLine handle >>=
+  interp >>=
   hPutStrLn handle
