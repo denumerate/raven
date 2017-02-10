@@ -49,4 +49,5 @@ listenAtEnd end conns = receive end >>=
             Nothing -> putStrLn "Connection not found") >> --move to log
              listenAtEnd end conns
       ConnectionClosed cid -> listenAtEnd end $ Map.delete cid conns
+      EndPointClosed -> putStrLn "Server Closing"
       _ -> putStrLn "Missing case")
