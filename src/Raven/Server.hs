@@ -14,9 +14,8 @@ import qualified Data.Map as Map
 
 import Raven.REPL
 
--- |Start the server and listen for connections at the supplied port number.
--- Creates a new thread to handle the connection
--- Returns the address of the server (if successful)
+-- |Start the server and listen for connections at the supplied ip:port number.
+-- Returns the address of the server endpoint (if successful)
 initServer :: String -> String -> IO (Maybe EndPointAddress)
 initServer ip portNum = withSocketsDo $
   createTransport ip portNum defaultTCPParameters >>=
