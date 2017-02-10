@@ -22,34 +22,31 @@ initServer portNum = withSocketsDo $
   (\trans -> case trans of
       Right trans' -> newEndPoint trans' >>=
         (\end -> case end of
-            Right end' -> newLocalNode trans' initRemoteTable >>=
-              (\node -> newMVar Map.empty >>=
-                runProcess node . liftIO . listenAtEnd end' >>
+            Right end' -> putStrLn ("New endpoint set up at " ++ (show . address) end') >>
+              newLocalNode trans' initRemoteTable >>=
+              (\node -> (runProcess node . liftIO . listenAtEnd end') Map.empty >>
                 return ())
             _ -> putStrLn "Endpoint not initialized, Server Failed") --move to log
       _ -> putStrLn "Transport not initialized, Server Failed") --move to log
 
 -- |Listen for and handle events from the endpoint
-listenAtEnd :: EndPoint -> MVar (Map ConnectionId Connection) -> IO ()
+listenAtEnd :: EndPoint -> Map ConnectionId (MVar Connection) -> IO ()
 listenAtEnd end conns = receive end >>=
   (\event -> case event of
-      ConnectionOpened cid reliabilty adrs -> forkIO
-        (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
-        (\conn -> case conn of
-            Right conn' -> takeMVar conns >>=
-              (\conns' -> putMVar conns $ Map.insert cid conn' conns') >>
-              return ()
-            _ -> putStrLn "Connection failed")) >> --move to log
-             listenAtEnd end conns
+      ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
+        (\cEntry -> forkIO
+          (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
+           (\conn -> case conn of
+               Right conn' -> putMVar cEntry conn' >>
+                 return ()
+               _ -> putStrLn "Connection failed")) >> --move to log
+          listenAtEnd end (Map.insert cid cEntry conns))
       Received cid info -> forkIO
-        (readMVar conns >>=
-        (\conns' -> case Map.lookup cid conns' of
-            Just conn -> Network.Transport.send conn info >>
+        (case Map.lookup cid conns of
+            Just conn -> readMVar conn >>=
+              (\conn' -> Network.Transport.send conn' info) >>
               return ()
-            Nothing -> putStrLn "Connection not found")) >> --move to log
+            Nothing -> putStrLn "Connection not found") >> --move to log
              listenAtEnd end conns
-      ConnectionClosed cid -> forkIO
-        (takeMVar conns >>=
-         (\conns' -> putMVar conns (Map.delete cid conns'))) >>
-        listenAtEnd end conns
+      ConnectionClosed cid -> listenAtEnd end $ Map.delete cid conns
       _ -> putStrLn "Missing case")
