@@ -25,9 +25,8 @@ initServer portNum = withSocketsDo $
         (\end -> case end of
             Right end' -> newLocalNode trans' initRemoteTable >>=
               (\node -> newMVar Map.empty >>=
-                (\conns-> runProcess node $
-                  spawnLocal (forever (liftIO (listenAtEnd end' conns))) >>
-                  return ()))
+                runProcess node . forever . liftIO . listenAtEnd end' >>
+                return ())
             _ -> putStrLn "Endpoint not initialized, Server Failed") --move to log
       _ -> putStrLn "Transport not initialized, Server Failed") --move to log
 
@@ -39,19 +38,20 @@ listenAtEnd end conns = receive end >>=
         (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
         (\conn -> case conn of
             Right conn' -> takeMVar conns >>=
-              (\conns' -> putMVar conns $ Map.insert cid conn' conns')
+              (\conns' -> putMVar conns $ Map.insert cid conn' conns') >>
+              putStrLn "conn accept"
             _ -> putStrLn "Connection failed")) >> --move to log
              return ()
       Received cid info -> forkIO
         (readMVar conns >>=
         (\conns' -> case Map.lookup cid conns' of
             Just conn -> Network.Transport.send conn info >>
-              return ()
+              putStrLn "conn send"
             Nothing -> putStrLn "Connection not found")) >> --move to log
              return ()
       ConnectionClosed cid -> forkIO
         (takeMVar conns >>=
-        (\conns' -> putMVar conns (Map.delete cid conns'))) >>
+         (\conns' -> putMVar conns (Map.delete cid conns'))) >>
         return ()
       _ -> putStrLn "Missing case"
   )
