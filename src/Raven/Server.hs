@@ -16,18 +16,20 @@ import Raven.REPL
 
 -- |Start the server and listen for connections at the supplied port number.
 -- Creates a new thread to handle the connection
-initServer :: Int -> IO ()
-initServer portNum = withSocketsDo $
-  createTransport "127.0.0.1" (show portNum) defaultTCPParameters >>=
+-- Returns the address of the server (if successful)
+initServer :: String -> String -> IO (Maybe EndPointAddress)
+initServer ip portNum = withSocketsDo $
+  createTransport ip portNum defaultTCPParameters >>=
   (\trans -> case trans of
       Right trans' -> newEndPoint trans' >>=
         (\end -> case end of
-            Right end' -> putStrLn ("New endpoint set up at " ++ (show . address) end') >>
-              newLocalNode trans' initRemoteTable >>=
+            Right end' -> newLocalNode trans' initRemoteTable >>=
               (\node -> (runProcess node . liftIO . listenAtEnd end') Map.empty >>
-                return ())
-            _ -> putStrLn "Endpoint not initialized, Server Failed") --move to log
-      _ -> putStrLn "Transport not initialized, Server Failed") --move to log
+                return (Just (address end')))
+            _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
+                 return Nothing)
+      _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
+        return Nothing)
 
 -- |Listen for and handle events from the endpoint
 listenAtEnd :: EndPoint -> Map ConnectionId (MVar Connection) -> IO ()
