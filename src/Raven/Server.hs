@@ -36,10 +36,22 @@ initServer portNum = withSocketsDo $
 listenAtEnd :: EndPoint -> MVar (Map ConnectionId Connection) -> IO ()
 listenAtEnd end conns = receive end >>=
   (\event -> case event of
-      ConnectionOpened cid reliabilty address ->
-        Network.Transport.connect end address reliabilty defaultConnectHints >>=
+      ConnectionOpened cid reliabilty address -> forkIO
+        (Network.Transport.connect end address reliabilty defaultConnectHints >>=
         (\conn -> case conn of
             Right conn' -> takeMVar conns >>=
               (\conns' -> putMVar conns $ Map.insert cid conn' conns')
-            _ -> putStrLn "Connection failed") --move to log
+            _ -> putStrLn "Connection failed")) >> --move to log
+             return ()
+      Received cid info -> forkIO
+        (readMVar conns >>=
+        (\conns' -> case Map.lookup cid conns' of
+            Just conn -> Network.Transport.send conn info >>
+              return ()
+            Nothing -> putStrLn "Connection not found")) >> --move to log
+             return ()
+      ConnectionClosed cid -> forkIO
+        (takeMVar conns >>=
+        (\conns' -> putMVar conns (Map.delete cid conns'))) >>
+        return ()
   )
