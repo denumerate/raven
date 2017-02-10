@@ -8,7 +8,6 @@ import Network.Transport.TCP
 import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
-import Control.Monad (forever)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -25,7 +24,7 @@ initServer portNum = withSocketsDo $
         (\end -> case end of
             Right end' -> newLocalNode trans' initRemoteTable >>=
               (\node -> newMVar Map.empty >>=
-                runProcess node . forever . liftIO . listenAtEnd end' >>
+                runProcess node . liftIO . listenAtEnd end' >>
                 return ())
             _ -> putStrLn "Endpoint not initialized, Server Failed") --move to log
       _ -> putStrLn "Transport not initialized, Server Failed") --move to log
@@ -39,19 +38,18 @@ listenAtEnd end conns = receive end >>=
         (\conn -> case conn of
             Right conn' -> takeMVar conns >>=
               (\conns' -> putMVar conns $ Map.insert cid conn' conns') >>
-              putStrLn "conn accept"
+              return ()
             _ -> putStrLn "Connection failed")) >> --move to log
-             return ()
+             listenAtEnd end conns
       Received cid info -> forkIO
         (readMVar conns >>=
         (\conns' -> case Map.lookup cid conns' of
             Just conn -> Network.Transport.send conn info >>
-              putStrLn "conn send"
+              return ()
             Nothing -> putStrLn "Connection not found")) >> --move to log
-             return ()
+             listenAtEnd end conns
       ConnectionClosed cid -> forkIO
         (takeMVar conns >>=
          (\conns' -> putMVar conns (Map.delete cid conns'))) >>
-        return ()
-      _ -> putStrLn "Missing case"
-  )
+        listenAtEnd end conns
+      _ -> putStrLn "Missing case")
