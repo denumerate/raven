@@ -3,7 +3,6 @@ module Raven.Server
   ) where
 
 import Network
-import Network.Socket
 import Network.Transport
 import Network.Transport.TCP
 import Control.Distributed.Process
@@ -27,7 +26,7 @@ initServer portNum = withSocketsDo $
             Right end' -> newLocalNode trans' initRemoteTable >>=
               (\node -> newMVar Map.empty >>=
                 (\conns-> runProcess node $
-                  spawnLocal $ forever $ liftIO $ listenAtEnd end' conns >>
+                  spawnLocal (forever (liftIO (listenAtEnd end' conns))) >>
                   return ()))
             _ -> putStrLn "Endpoint not initialized, Server Failed") --move to log
       _ -> putStrLn "Transport not initialized, Server Failed") --move to log
@@ -36,8 +35,8 @@ initServer portNum = withSocketsDo $
 listenAtEnd :: EndPoint -> MVar (Map ConnectionId Connection) -> IO ()
 listenAtEnd end conns = receive end >>=
   (\event -> case event of
-      ConnectionOpened cid reliabilty address -> forkIO
-        (Network.Transport.connect end address reliabilty defaultConnectHints >>=
+      ConnectionOpened cid reliabilty adrs -> forkIO
+        (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
         (\conn -> case conn of
             Right conn' -> takeMVar conns >>=
               (\conns' -> putMVar conns $ Map.insert cid conn' conns')
@@ -54,4 +53,5 @@ listenAtEnd end conns = receive end >>=
         (takeMVar conns >>=
         (\conns' -> putMVar conns (Map.delete cid conns'))) >>
         return ()
+      _ -> putStrLn "Missing case"
   )
