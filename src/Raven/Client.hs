@@ -13,7 +13,7 @@ import qualified Data.ByteString.Char8 as B
 -- |Start the client and listen for connections at the supplied ip:port number
 -- then connects to the server
 -- Returns the address of the client (if successful)
-initClient :: String -> String -> EndPointAddress -> IO (Maybe EndPointAddress)
+initClient :: String -> String -> EndPointAddress -> IO ()
 initClient ip portNum serverAdrs = withSocketsDo $
   createTransport ip portNum defaultTCPParameters >>=
   (\trans -> case trans of
@@ -21,15 +21,16 @@ initClient ip portNum serverAdrs = withSocketsDo $
         (\end -> case end of
             Right end' -> connect end' serverAdrs ReliableOrdered defaultConnectHints >>=
               (\conn -> case conn of
-                  Right conn' -> forkIO (listenAtEnd end') >>
-                                 forever (getAndSendLine conn') >>
-                                 return (Just (address end'))
+                  Right conn' ->
+                    forkIO (listenAtEnd end') >>
+                    forever (getAndSendLine conn') >>
+                    return ()
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
-                    return Nothing)
+                    return ())
             _ -> putStrLn "Endpoint not initialized, Client Failed" >> --move to log
-                 return Nothing)
+                 return ())
       _ -> putStrLn "Transport not initialized, Client Failed" >> --move to log
-        return Nothing)
+        return ())
 
 -- |Listen for and handle events from the endpoint
 listenAtEnd :: EndPoint -> IO ()
