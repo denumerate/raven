@@ -5,12 +5,10 @@ module Raven.Client
 import Network
 import Network.Transport
 import Network.Transport.TCP
-import Control.Distributed.Process
-import Control.Distributed.Process.Node
 import Control.Concurrent
 import Control.Monad (forever)
 
-import Data.ByteString.Char8
+import qualified Data.ByteString.Char8 as B
 
 -- |Start the client and listen for connections at the supplied ip:port number
 -- then connects to the server
@@ -23,11 +21,9 @@ initClient ip portNum serverAdrs = withSocketsDo $
         (\end -> case end of
             Right end' -> connect end' serverAdrs ReliableOrdered defaultConnectHints >>=
               (\conn -> case conn of
-                  Right conn' -> newLocalNode trans' initRemoteTable >>=
-                    (\node -> runProcess node
-                              (spawnLocal (liftIO (listenAtEnd end')) >>
-                              ) >>
-                              return (Just (address end')))
+                  Right conn' -> forkIO (listenAtEnd end') >>
+                                 forever (getAndSendLine conn') >>
+                                 return (Just (address end'))
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
                     return Nothing)
             _ -> putStrLn "Endpoint not initialized, Client Failed" >> --move to log
@@ -47,4 +43,5 @@ listenAtEnd end = receive end >>=
 
 getAndSendLine :: Connection -> IO ()
 getAndSendLine conn = getLine >>=
-  (\line -> send conn [pack line])
+  (\line -> Network.Transport.send conn [B.pack line]) >>
+  return ()
