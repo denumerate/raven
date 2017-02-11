@@ -11,6 +11,8 @@ import Control.Concurrent
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as B
 
 import Raven.REPL
 
@@ -25,8 +27,9 @@ initServer ip portNum = withSocketsDo $
         (\end -> case end of
             Right end' -> newLocalNode trans' initRemoteTable >>=
               (\node -> putStrLn ("Server established at " ++ (show . address) end') >>
-                (runProcess node . liftIO . listenAtEnd end') Map.empty >>
-                return ())
+                runProcess node
+                (spawnLocal (liftIO (listenAtEnd end' Map.empty)) >>
+                receiveWait []))
             _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
                  return ())
       _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
@@ -47,10 +50,15 @@ listenAtEnd end conns = receive end >>=
       Received cid info -> forkIO
         (case Map.lookup cid conns of
             Just conn -> readMVar conn >>=
-              (\conn' -> Network.Transport.send conn' info) >>
+              handleData info >>
               return ()
             Nothing -> putStrLn "Connection not found") >> --move to log
              listenAtEnd end conns
       ConnectionClosed cid -> listenAtEnd end $ Map.delete cid conns
       EndPointClosed -> putStrLn "Server Closing"
-      _ -> putStrLn "Missing case")
+      _ -> putStrLn "Missing case") --move to log
+
+handleData :: [ByteString] -> Connection -> IO ()
+handleData sentData conn =
+  Network.Transport.send conn sentData >>
+  return ()
