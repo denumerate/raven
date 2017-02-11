@@ -2,17 +2,14 @@ module Raven.REPL ( interp
                   ) where
 
 import Language.Haskell.Interpreter
-import System.IO
 import Data.List (intercalate)
 
 -- |Interpret a string, return the result
-interp :: Handle -> IO ()
-interp handle =
-  hGetLine handle >>=
-  (\line ->
-     runInterpreter (initREPL >> eval line >>=
-                     liftIO . hPutStrLn handle)) >>
-  interp handle
+interp :: String -> IO String
+interp value = runInterpreter (initREPL >> eval value) >>=
+  (\out -> case out of
+      Left err -> return (errorString err)
+      Right out' -> return out')
 
 -- | prints errors
 errorString :: InterpreterError -> String

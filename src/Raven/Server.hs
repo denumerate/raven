@@ -88,4 +88,5 @@ sendResult conn (TestMsg msg) =
   return ()
 
 handleTest :: (ProcessId,TestMsg) -> Process ()
-handleTest (pid,msg) = Control.Distributed.Process.send pid msg
+handleTest (pid,(TestMsg msg)) = liftIO (interp (B.unpack (head msg))) >>=
+  (\out -> Control.Distributed.Process.send pid (TestMsg [B.pack out]))
