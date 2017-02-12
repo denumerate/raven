@@ -1,12 +1,13 @@
 module Raven.REPL ( interp
+                  , initREPL
                   ) where
 
 import Language.Haskell.Interpreter
 import Data.List (intercalate)
 
 -- |Interpret a string, return the result
-interp :: String -> IO String
-interp value = runInterpreter (initREPL >> eval value) >>=
+interp :: Interpreter () -> String -> IO String
+interp interpS value = runInterpreter (interpS >> eval value) >>=
   (\out -> case out of
       Left err -> return (errorString err)
       Right out' -> return out')
@@ -20,6 +21,6 @@ errorString (WontCompile es) = intercalate "\n" (header : map unbox es)
 errorString e = show e
 
 -- |initializes the repl
-initREPL :: MonadInterpreter m => m ()
+initREPL :: Interpreter ()
 initREPL = setImportsQ
   [ ("Prelude", Nothing)]

@@ -2,7 +2,7 @@
 --  see http://haskell.org/cabal/users-guide/
 
 name:                raven
-version:             0.1.2
+version:             0.1.3
 synopsis:            N/A
 -- description:         
 homepage:            N/A
@@ -22,6 +22,7 @@ executable raven
                        Raven.Server
                        Raven.Server.NodeMsgs
                        Raven.Server.ConnNode
+                       Raven.Server.REPLNode
                        Raven.Client
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10

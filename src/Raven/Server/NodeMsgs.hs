@@ -1,12 +1,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Raven.Server.NodeMsgs
-  ( TestMsg (..)
+  ( REPLMsg(..)
+  , ProcessedMsg(..)
   ) where
 
 import Data.Binary
 import Data.Typeable
-import Data.ByteString.Char8 (ByteString)
 
+newtype REPLMsg = REPLMsg String
+  deriving (Binary,Typeable)
 
-newtype TestMsg = TestMsg [ByteString]
+newtype ProcessedMsg = ProcessedMsg String
   deriving (Binary,Typeable)

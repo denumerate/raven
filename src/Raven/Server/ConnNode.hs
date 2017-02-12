@@ -11,6 +11,7 @@ import Control.Concurrent
 import Control.Monad (forever)
 
 import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as B
 
 import Raven.Server.NodeMsgs
 
@@ -18,7 +19,7 @@ import Raven.Server.NodeMsgs
 type ConnNode = (LocalNode,MVar ProcessId)
 
 -- |Builds and returns node to handle connections.
--- Needs the transport layer, server node's pid, and the established connection
+-- Needs the transport layer, and the established connection
 newConnNode :: Transport -> Connection -> IO ConnNode
 newConnNode trans conn = newEmptyMVar >>=
   (\pid -> newLocalNode trans initRemoteTable >>=
@@ -29,15 +30,15 @@ newConnNode trans conn = newEmptyMVar >>=
        return (connNode,pid)))
 
 -- |Takes the result of the servers work and sends it back to the client
-sendResult :: Connection -> TestMsg -> Process ()
-sendResult conn (TestMsg msg) =
-  liftIO $ Network.Transport.send conn msg >>
+sendResult :: Connection -> ProcessedMsg -> Process ()
+sendResult conn (ProcessedMsg msg) =
+  liftIO $ Network.Transport.send conn [B.pack msg] >>
   return ()
 
 -- |Handles the data send by a received event
 -- needs the servers process id
 handleReceived :: MVar ProcessId -> [ByteString] -> ConnNode -> IO ()
-handleReceived pid received (connNode,self) = readMVar pid >>=
+handleReceived pid [msg] (connNode,self) = readMVar pid >>=
   (\pid' -> readMVar self >>=
     (\self' -> runProcess connNode
-      (Control.Distributed.Process.send pid' (self',TestMsg received))))
+      (Control.Distributed.Process.send pid' (self',REPLMsg (B.unpack msg)))))

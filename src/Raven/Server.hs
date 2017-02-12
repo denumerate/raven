@@ -12,11 +12,11 @@ import Control.Monad (forever)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 
 import Raven.Server.NodeMsgs
 import Raven.Server.ConnNode
+import Raven.Server.REPLNode
 import Raven.REPL
 
 
@@ -31,12 +31,14 @@ initServer ip portNum = withSocketsDo $
         (\end -> case end of
             Right end' -> newLocalNode trans' initRemoteTable >>=
               (\node -> putStrLn ("Server established at " ++ (show . address) end') >>
-                newEmptyMVar >>=
-                (\pid ->
+                newREPLNode trans' >>=
+                (\replNode -> newEmptyMVar >>=
+                  (\pid ->
                     runProcess node
                     (spawnLocal (liftIO (listenAtEnd trans' pid end' Map.empty)) >>
-                     spawnLocal (forever (receiveWait [match handleTest])) >>=
-                     liftIO . putMVar pid)))
+                     spawnLocal (forever (receiveWait
+                                          [match (handleREPL replNode)])) >>=
+                     liftIO . putMVar pid))))
             _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
                  return ())
       _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
@@ -67,6 +69,6 @@ listenAtEnd trans pid end conns = receive end >>=
       EndPointClosed -> putStrLn "Server Closing"
       _ -> putStrLn "Missing case") --move to log
 
-handleTest :: (ProcessId,TestMsg) -> Process ()
-handleTest (pid,(TestMsg msg)) = liftIO (interp (B.unpack (head msg))) >>=
-  (\out -> Control.Distributed.Process.send pid (TestMsg [B.pack out]))
+handleREPL :: REPLNode -> (ProcessId,REPLMsg) -> Process ()
+handleREPL replNode msg = liftIO (readMVar replNode) >>=
+  (\replNode' -> Control.Distributed.Process.send replNode' msg)
