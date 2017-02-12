@@ -13,15 +13,23 @@ import Data.Text (Text)
 import Data.Typeable
 import GHC.Float
 
--- |Creates the requirements for an Entry which are:
--- the entry must be able to go from a typeable input and back through
--- buildEntry, which checks the input against possible values and declares them,
--- and dumpEntry, which dumps the values
--- and there must be an NA value to indicate missing or corrupted data
--- and can be checked for with the isNA predicate
+-- |Entry is a polymorphic type used by tables.
+-- This allows tables to have a single entry type (and be more flexible)
 class Entry a where
+  -- |build entry takes any type and turns it into an entry
   buildEntry :: (Typeable b) => b -> a
-  dumpEntry :: (Typeable b) => a -> Maybe b
+  -- |Gets an Integral from an entry (if possible)
+  getIntegral :: (Integral b) => a -> Maybe b
+  -- |Gets a floating from an entry (if possible)
+  getFloating :: (Floating b) => a -> Maybe b
+  -- |Gets a ratio from an entry (if possible)
+  getRatio :: (Integral b) => a -> Maybe (Ratio b)
+  -- |Gets a Text from an entry (if possible)
+  getText :: a -> Maybe Text
+  -- |Gets a Bool from an entry (if possible)
+  getBool :: a -> Maybe Bool
+  -- |Simply prints the entry, if not NA
+  getEntry :: a -> Maybe Text
   isNA :: a -> Bool
 
 -- |BasicEntry creates a simple entry with bounded values
@@ -64,12 +72,12 @@ instance Entry BasicEntry where
        _ -> BasicNA
     |otherwise = BasicNA
 
-  dumpEntry (BasicInt val) = cast val
-  dumpEntry (BasicDouble val) = cast val
-  dumpEntry (BasicRatio val) = cast val
-  dumpEntry (BasicString val) = cast val
-  dumpEntry (BasicBool val) = cast val
-  dumpEntry BasicNA = Nothing
+  getIntegral (BasicInt val) = Nothing
+  getIntegral (BasicDouble val) = Nothing
+  getIntegral (BasicRatio val) = Nothing
+  getIntegral (BasicString val) = Nothing
+  getIntegral (BasicBool val) = Nothing
+  getIntegral BasicNA = Nothing
 
   isNA BasicNA = True
   isNA _ = False
@@ -115,12 +123,12 @@ instance Entry BasicUnboundEntry where
        _ -> BasicUnboundNA
     |otherwise = BasicUnboundNA
 
-  dumpEntry (BasicUnboundInt val) = cast val
-  dumpEntry (BasicUnboundDouble val) = cast val
-  dumpEntry (BasicUnboundRatio val) = cast val
-  dumpEntry (BasicUnboundString val) = cast val
-  dumpEntry (BasicUnboundBool val) = cast val
-  dumpEntry BasicUnboundNA = Nothing
+  getIntegral (BasicUnboundInt val) = Just val
+  getIntegral (BasicUnboundDouble val) = Nothing
+  getIntegral (BasicUnboundRatio val) = Nothing
+  getIntegral (BasicUnboundString val) = Nothing
+  getIntegral (BasicUnboundBool val) = Nothing
+  getIntegral BasicUnboundNA = Nothing
 
   isNA BasicUnboundNA = True
   isNA _ = False
