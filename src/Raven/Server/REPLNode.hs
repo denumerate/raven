@@ -33,6 +33,8 @@ newREPLNode trans = newEmptyMVar >>=
 -- |matches to a REPLmsg and runs the repl on the sent string.
 -- Sends back a ProcessedMsg to the connection
 runREPL :: MVar (Interpreter ()) -> (ProcessId,REPLMsg) -> Process ()
-runREPL interpS (pid,(REPLMsg value)) = liftIO (readMVar interpS) >>=
-  (\interpS' -> liftIO (interp interpS' value)) >>=
-  Control.Distributed.Process.send pid . ProcessedMsg
+runREPL interpS (pid,(REPLMsg value)) = spawnLocal
+  (liftIO (readMVar interpS) >>=
+   (\interpS' -> liftIO (interp interpS' value)) >>=
+   Control.Distributed.Process.send pid . ProcessedMsg) >>
+  return ()
