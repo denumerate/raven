@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Raven.Server
   ( initServer
   ) where
@@ -15,13 +14,10 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
-import Data.Binary
-import Data.Typeable
 
+import Raven.Server.NodeMsgs
 import Raven.REPL
 
-newtype TestMsg = TestMsg [ByteString]
-  deriving (Binary,Typeable)
 
 -- |Start the server and listen for connections at the supplied ip:port number.
 -- Returns the address of the server endpoint (if successful)
@@ -39,8 +35,7 @@ initServer ip portNum = withSocketsDo $
                     runProcess node
                     (spawnLocal (liftIO (listenAtEnd trans' pid end' Map.empty)) >>
                      spawnLocal (forever (receiveWait [match handleTest])) >>=
-                     liftIO . putMVar pid>>
-                     unless True (return ()))))
+                     liftIO . putMVar pid)))
             _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
                  return ())
       _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
