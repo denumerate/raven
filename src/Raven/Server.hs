@@ -8,7 +8,7 @@ import Network.Transport.TCP
 import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
-import Control.Monad (forever,unless)
+import Control.Monad (forever)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -16,6 +16,7 @@ import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 
 import Raven.Server.NodeMsgs
+import Raven.Server.ConnNode
 import Raven.REPL
 
 
@@ -44,43 +45,27 @@ initServer ip portNum = withSocketsDo $
 -- |Listen for and handle events from the endpoint.
 -- The pid is the id of the node's listening process
 listenAtEnd :: Transport -> MVar ProcessId -> EndPoint ->
-  Map ConnectionId (MVar Connection) -> IO ()
+  Map ConnectionId (MVar ConnNode) -> IO ()
 listenAtEnd trans pid end conns = receive end >>=
   (\event -> case event of
       ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
-        (\cEntry -> forkIO
+        (\cNode -> forkIO
           (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
            (\conn -> case conn of
-               Right conn' -> putMVar cEntry conn' >>
-                 return ()
+               Right conn' -> newConnNode trans conn' >>=
+                 putMVar cNode
                _ -> putStrLn "Connection failed")) >> --move to log
-          listenAtEnd trans pid end (Map.insert cid cEntry conns))
+          listenAtEnd trans pid end (Map.insert cid cNode conns))
       Received cid info -> forkIO
         (case Map.lookup cid conns of
             Just conn -> readMVar conn >>=
-              handleData trans pid info >>
+              handleReceived pid info >>
               return ()
             Nothing -> putStrLn "Connection not found") >> --move to log
              listenAtEnd trans pid end conns
       ConnectionClosed cid -> listenAtEnd trans pid end $ Map.delete cid conns
       EndPointClosed -> putStrLn "Server Closing"
       _ -> putStrLn "Missing case") --move to log
-
--- |Handle the taken from a Received event, pid point to the node's message handler.
--- Waits for response and then passes the response back to the connection
-handleData :: Transport -> MVar ProcessId -> [ByteString] -> Connection -> IO ()
-handleData trans pid sentData conn = newLocalNode trans initRemoteTable >>=
-  (\handleNode -> readMVar pid >>=
-    (\pid' -> runProcess handleNode
-      (getSelfPid >>=
-      (\self -> Control.Distributed.Process.send pid' (self,TestMsg sentData)) >>
-      receiveWait [match (sendResult conn)])))
-
--- |Takes the result of the servers work and sends it back to the client
-sendResult :: Connection -> TestMsg -> Process ()
-sendResult conn (TestMsg msg) =
-  liftIO $ Network.Transport.send conn msg >>
-  return ()
 
 handleTest :: (ProcessId,TestMsg) -> Process ()
 handleTest (pid,(TestMsg msg)) = liftIO (interp (B.unpack (head msg))) >>=

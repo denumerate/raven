@@ -23,8 +23,7 @@ initClient ip portNum serverAdrs = withSocketsDo $
               (\conn -> case conn of
                   Right conn' ->
                     forkIO (listenAtEnd end') >>
-                    forever (getAndSendLine conn') >>
-                    return ()
+                    forever (getAndSendLine conn')
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
                     return ())
             _ -> putStrLn "Endpoint not initialized, Client Failed" >> --move to log
