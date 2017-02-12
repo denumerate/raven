@@ -12,13 +12,10 @@ import Control.Monad (forever)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.ByteString.Char8 as B
 
 import Raven.Server.NodeMsgs
 import Raven.Server.ConnNode
 import Raven.Server.REPLNode
-import Raven.REPL
-
 
 -- |Start the server and listen for connections at the supplied ip:port number.
 -- Returns the address of the server endpoint (if successful)
