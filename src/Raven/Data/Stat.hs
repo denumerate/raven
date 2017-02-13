@@ -1,14 +1,14 @@
 module Raven.Data.Stat
-  (
+  ( entrySum
   )where
 
 import Data.Vector(Vector)
 import qualified Data.Vector as V
-import Data.Typeable
 
 import Raven.Data.Entry
 
-entrySum :: (Entry a,Integral b,Typeable b) => TypeRep -> Vector a -> b
-entrySum eType = V.foldl' (\acc val -> case (dumpEntry val :: Maybe eType) of
+-- |Pulls the entry using the provided function and sums the result
+entrySum :: (Entry a,Num b) =>  Vector a -> b
+entrySum = V.foldl' (\acc val -> case getEntryNum val of
                           Just val' -> val' + acc
                           Nothing -> acc) 0

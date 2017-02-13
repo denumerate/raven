@@ -1,8 +1,8 @@
 module Raven.Data.Entry
   ( Entry
   , buildEntry
-  , dumpEntry
-  , isNA
+  , getEntryNum
+  , isEntryNA
   , BasicEntry
   , BasicUnboundEntry
   ) where
@@ -18,19 +18,10 @@ import GHC.Float
 class Entry a where
   -- |build entry takes any type and turns it into an entry
   buildEntry :: (Typeable b) => b -> a
-  -- |Gets an Integral from an entry (if possible)
-  getIntegral :: (Integral b) => a -> Maybe b
-  -- |Gets a floating from an entry (if possible)
-  getFloating :: (Floating b) => a -> Maybe b
-  -- |Gets a ratio from an entry (if possible)
-  getRatio :: (Integral b) => a -> Maybe (Ratio b)
-  -- |Gets a Text from an entry (if possible)
-  getText :: a -> Maybe Text
-  -- |Gets a Bool from an entry (if possible)
-  getBool :: a -> Maybe Bool
-  -- |Simply prints the entry, if not NA
-  getEntry :: a -> Maybe Text
-  isNA :: a -> Bool
+  -- |Pulls a number from an entry value (if possible)
+  getEntryNum :: (Num b) => a -> Maybe b
+  -- |Tests if the entry is NA
+  isEntryNA :: a -> Bool
 
 -- |BasicEntry creates a simple entry with bounded values
 data BasicEntry = BasicInt Int
@@ -72,15 +63,13 @@ instance Entry BasicEntry where
        _ -> BasicNA
     |otherwise = BasicNA
 
-  getIntegral (BasicInt val) = Nothing
-  getIntegral (BasicDouble val) = Nothing
-  getIntegral (BasicRatio val) = Nothing
-  getIntegral (BasicString val) = Nothing
-  getIntegral (BasicBool val) = Nothing
-  getIntegral BasicNA = Nothing
+  getEntryNum (BasicInt val) = Just $ fromIntegral val
+  getEntryNum (BasicDouble val) = cast val
+  getEntryNum (BasicRatio val) = Just val
+  getEntryNum _ = Nothing
 
-  isNA BasicNA = True
-  isNA _ = False
+  isEntryNA BasicNA = True
+  isEntryNA _ = False
 
 -- | BasicUnboundEntry creates a simple entry with unbounded values
 data BasicUnboundEntry = BasicUnboundInt Integer
@@ -123,12 +112,5 @@ instance Entry BasicUnboundEntry where
        _ -> BasicUnboundNA
     |otherwise = BasicUnboundNA
 
-  getIntegral (BasicUnboundInt val) = Just val
-  getIntegral (BasicUnboundDouble val) = Nothing
-  getIntegral (BasicUnboundRatio val) = Nothing
-  getIntegral (BasicUnboundString val) = Nothing
-  getIntegral (BasicUnboundBool val) = Nothing
-  getIntegral BasicUnboundNA = Nothing
-
-  isNA BasicUnboundNA = True
-  isNA _ = False
+  isEntryNA BasicUnboundNA = True
+  isEntryNA _ = False
