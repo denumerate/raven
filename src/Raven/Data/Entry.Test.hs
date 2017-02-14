@@ -16,7 +16,7 @@ main = do
     else exitSuccess
 
 allTests :: Test
-allTests = TestList $ runtests getEntryVector getEntryVectorData
+allTests = TestList $ runtests getEntries getEntriesData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -26,12 +26,20 @@ runtests f ls = map (uncurry (~:)) (createtest f ls)
 createtest :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [(String,Test)]
 createtest f = map (\(s,x,y) -> (s,TestCase $ y @=? f x))
 
+readVector :: (Entry a) => [String] -> Vector a
+readVector = V.fromList . map readEntry
+
 --Test values:
+navector = ["NA","NA","NA"]
 
-navector = V.fromList $ map readEntry ["NA","NA","NA"]
+vector1 = ["1","2","3"]
 
-getEntryVectorData :: [(String,Vector BasicEntry,Vector Int)]
-getEntryVectorData =
-  [ ("getEntryVector: empty",V.empty,V.empty)
-  , ("getEntryVector: all NA's",navector,V.empty)
+vector2 = ["1","NA","2"]
+
+getEntriesData :: [(String,Vector BasicEntry,[Int])]
+getEntriesData =
+  [ ("getEntries: empty",V.empty,[])
+  , ("getEntries: all NA's",readVector navector,[])
+  , ("getEntries: norm",readVector vector1,[1..3])
+  , ("getEntries: some NA'a",readVector vector2,[1,2])
   ]
