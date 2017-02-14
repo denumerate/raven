@@ -4,7 +4,6 @@ module Raven.Data.Entry
   , getEntries
   , isEntryNA
   , na
-  , getEntries
   , BasicEntry(..)
   , BasicUnboundEntry(..)
   ) where
