@@ -20,6 +20,7 @@ allTests = TestList $ runtests mean meanData
            ++ runtests ratioMean ratioMeanData
            ++ runtests median medianData
            ++ runtests intMedian intMedianData
+           ++ runtests ratioMedian ratioMedianData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -79,4 +80,13 @@ intMedianData =
   , ("intMedian: norm 2",[5,10,1,4,3,7,6,8,2,9],11%2)
   , ("intMedian: norm 3",[4,2,6,8,9,1,5,3,7],5)
   , ("intMedian: norm 4",[3,-1,6,7],9%2)
+  ]
+
+ratioMedianData :: (Integral a) => [(String,[Ratio a],Ratio a)]
+ratioMedianData =
+  [ ("ratioMedian: empty",[],0)
+  , ("ratioMedian: single",[-1],-1)
+  , ("ratioMedian: double",[4%3,2%3],1)
+  , ("ratioMedian: norm",[4%3,-5%2,7],4%3)
+  , ("ratioMedian: norm 1",[2%3,1%2,-6,5],7%12)
   ]

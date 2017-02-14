@@ -4,6 +4,7 @@ module Raven.Data.Stat
   , ratioMean
   , median
   , intMedian
+  , ratioMedian
   )where
 
 import Data.Ratio
@@ -44,3 +45,13 @@ intMedian ls = let len = length ls
                in if odd len
                    then (last (take (pnt + 1) ls')) % 1
                    else intMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
+
+-- |Median for ratios
+ratioMedian :: (Integral a) => [Ratio a] -> Ratio a
+ratioMedian [] = 0
+ratioMedian ls = let len = length ls
+                     ls' = sort ls
+                     pnt = div len 2
+                 in if odd len
+                    then last (take (pnt + 1) ls')
+                    else ratioMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
