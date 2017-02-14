@@ -5,10 +5,13 @@ module Raven.Data.Stat
   , median
   , intMedian
   , ratioMedian
+  , countInstances
   )where
 
 import Data.Ratio
 import Data.List
+import Data.Map (Map)
+import qualified Data.Map as M
 
 -- |Mean for fractional values
 mean :: (Fractional a) => [a] -> a
@@ -55,3 +58,13 @@ ratioMedian ls = let len = length ls
                  in if odd len
                     then last (take (pnt + 1) ls')
                     else ratioMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
+
+-- |Counts the number of times each item in a list occurs
+countInstances :: (Ord a) => [a] -> Map a Int
+countInstances = foldl' (\acc val -> case M.lookup val acc of
+                            Just count -> M.insert val (succ count) acc
+                            _ -> M.insert val 1 acc) M.empty
+
+-- |Mode average
+mode :: [a] -> Maybe a
+mode = M.lookupMax . countInstances

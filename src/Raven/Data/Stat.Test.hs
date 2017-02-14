@@ -3,6 +3,8 @@ module Main(main) where
 import Test.HUnit
 import System.Exit
 import Data.Ratio
+import Data.Map (Map)
+import qualified Data.Map as M
 
 import Raven.Data.Stat
 
@@ -21,6 +23,7 @@ allTests = TestList $ runtests mean meanData
            ++ runtests median medianData
            ++ runtests intMedian intMedianData
            ++ runtests ratioMedian ratioMedianData
+           ++ runtests countInstances countInstancesData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -30,7 +33,7 @@ runtests f ls = map (uncurry (~:)) (createtest f ls)
 createtest :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [(String,Test)]
 createtest f = map (\(s,x,y) -> (s,TestCase $ y @=? f x))
 
-meanData :: (Fractional a) => [(String,[a],a)]
+meanData :: [(String,[Double],Double)]
 meanData =
   [ ("mean: empty",[],0)
   , ("mean: single",[1],1)
@@ -39,7 +42,7 @@ meanData =
   , ("mean: norm 2",[-1,2.5],1.5/2)
   ]
 
-intMeanData :: (Integral a) => [(String,[a],Ratio a)]
+intMeanData :: [(String,[Int],Ratio Int)]
 intMeanData =
   [ ("intMean: empty",[],0)
   , ("intMean: single",[2],2)
@@ -49,7 +52,7 @@ intMeanData =
   , ("intMean: norm 3",[-1,2,4],5%3)
   ]
 
-ratioMeanData :: (Integral a) => [(String,[Ratio a],Ratio a)]
+ratioMeanData :: [(String,[Ratio Int],Ratio Int)]
 ratioMeanData =
   [ ("ratioMean: empty",[],0)
   , ("ratioMean: single",[1],1)
@@ -58,7 +61,7 @@ ratioMeanData =
   , ("ratioMean: norm 2",[-1%4,3%4],1%4)
   ]
 
-medianData :: (Fractional a,Ord a) => [(String,[a],a)]
+medianData :: [(String,[Double],Double)]
 medianData =
   [ ("median: empty",[],0)
   , ("median: single",[1],1)
@@ -70,7 +73,7 @@ medianData =
   , ("median: norm 4",[9,4,6],6)
   ]
 
-intMedianData :: (Integral a) => [(String,[a],Ratio a)]
+intMedianData :: [(String,[Int],Ratio Int)]
 intMedianData =
   [ ("intMedian: empty",[],0)
   , ("intMedian: single",[4],4)
@@ -82,11 +85,22 @@ intMedianData =
   , ("intMedian: norm 4",[3,-1,6,7],9%2)
   ]
 
-ratioMedianData :: (Integral a) => [(String,[Ratio a],Ratio a)]
+ratioMedianData :: [(String,[Ratio Int],Ratio Int)]
 ratioMedianData =
   [ ("ratioMedian: empty",[],0)
   , ("ratioMedian: single",[-1],-1)
   , ("ratioMedian: double",[4%3,2%3],1)
   , ("ratioMedian: norm",[4%3,-5%2,7],4%3)
   , ("ratioMedian: norm 1",[2%3,1%2,-6,5],7%12)
+  ]
+
+countInstancesData :: [(String,[Int],Map Int Int)]
+countInstancesData =
+  [ ("countInstances: empty",[],M.empty)
+  , ("countInstances: single",[2],M.fromList [(2,1)])
+  , ("countInstances: no repeats",[1..4],
+    M.fromList [(1,1),(2,1),(3,1),(4,1)])
+  , ("countInstances: all repeat",[2,2,2],M.fromList [(2,3)])
+  , ("countInstances: norm",[1,2,3,2],
+    M.fromList [(1,1),(2,2),(3,1)])
   ]
