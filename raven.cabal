@@ -39,6 +39,8 @@ executable raven
 
 library
   exposed-modules:     Raven.Data.Entry
+                       Raven.Data.BasicEntry
+                       Raven.Data.BasicUnboundEntry
                        Raven.Data.Table
                        Raven.Data.Stat
   build-depends:       base >=4.9 && <4.10
