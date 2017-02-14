@@ -28,4 +28,4 @@ createtest f = map (\(s,x,y) -> (s,TestCase $ y @=? f x))
 
 getEntryVectorData :: [(String,Vector BasicEntry,Vector Int)]
 getEntryVectorData =
-  []
+  [("getEntryVector: empty",V.empty,V.empty)]
