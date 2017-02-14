@@ -68,3 +68,12 @@ Test-suite test-table
                      , text >= 1.2
   hs-source-dirs:      src/Raven/Data
   default-language:    Haskell2010
+
+Test-suite test-stat
+  type:                exitcode-stdio-1.0
+  main-is:             Stat.Test.hs
+  build-depends:       base >= 4.9
+                     , HUnit
+                     , raven
+  hs-source-dirs:      src/Raven/Data
+  default-language:    Haskell2010
