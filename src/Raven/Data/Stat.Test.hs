@@ -66,8 +66,17 @@ medianData =
   , ("median: norm 1",[1.5,-0.5],0.5)
   , ("median: norm 2",[4,2,6,8,9,1,5,3,7],5)
   , ("median: norm 3",[5,10,1,4,3,7,6,8,2,9],5.5)
+  , ("median: norm 4",[9,4,6],6)
   ]
 
-intMedianData :: (Fractional a) => [(String,[a],Ratio a)]
+intMedianData :: (Integral a) => [(String,[a],Ratio a)]
 intMedianData =
-  []
+  [ ("intMedian: empty",[],0)
+  , ("intMedian: single",[4],4)
+  , ("intMedian: double",[2,3],5%2)
+  , ("intMedian: norm",[3,1,2],2)
+  , ("intMedian: norm 1",[-1,5,0],0)
+  , ("intMedian: norm 2",[5,10,1,4,3,7,6,8,2,9],11%2)
+  , ("intMedian: norm 3",[4,2,6,8,9,1,5,3,7],5)
+  , ("intMedian: norm 4",[3,-1,6,7],9%2)
+  ]
