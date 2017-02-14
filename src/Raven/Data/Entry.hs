@@ -1,8 +1,9 @@
 module Raven.Data.Entry
   ( Entry
   , buildEntry
-  , getEntryNum
+  , getEntry
   , isEntryNA
+  , getEntryVector
   , BasicEntry
   , BasicUnboundEntry
   ) where
@@ -10,6 +11,8 @@ module Raven.Data.Entry
 import Data.Ratio
 import qualified Data.Text as Text
 import Data.Text (Text)
+import Data.Vector(Vector)
+import qualified Data.Vector as V
 import Data.Typeable
 import GHC.Float
 
@@ -19,7 +22,7 @@ class Entry a where
   -- |build entry takes any type and turns it into an entry
   buildEntry :: (Typeable b) => b -> a
   -- |Pulls a number from an entry value (if possible)
-  getEntryNum :: (Num b) => a -> Maybe b
+  getEntry :: (Typeable b) => a -> Maybe b
   -- |Tests if the entry is NA
   isEntryNA :: a -> Bool
 
@@ -31,6 +34,11 @@ data BasicEntry = BasicInt Int
                 | BasicBool Bool
                 | BasicNA
 
+-- |Pulls the entry into a vector of a specific type, ignoring NA's and using getEnrty
+getEntryVector :: (Entry a,Typeable b) =>  Vector a -> Vector b
+getEntryVector = V.fromList . reverse . V.foldl' (\acc val -> case getEntry val of
+                                                     Just val' -> val':acc
+                                                     Nothing -> acc) []
 instance Entry BasicEntry where
   buildEntry val
     |typeOf val == typeOf (4 :: Int) = case cast val of
@@ -63,10 +71,12 @@ instance Entry BasicEntry where
        _ -> BasicNA
     |otherwise = BasicNA
 
-  getEntryNum (BasicInt val) = Just $ fromIntegral val
-  getEntryNum (BasicDouble val) = cast val
-  getEntryNum (BasicRatio val) = Just val
-  getEntryNum _ = Nothing
+  getEntry (BasicInt val) = cast val
+  getEntry (BasicDouble val) = cast val
+  getEntry (BasicRatio val) = cast val
+  getEntry (BasicString val) = cast val
+  getEntry (BasicBool val) = cast val
+  getEntry _ = Nothing
 
   isEntryNA BasicNA = True
   isEntryNA _ = False
@@ -111,6 +121,13 @@ instance Entry BasicUnboundEntry where
        Just val' -> BasicUnboundBool val'
        _ -> BasicUnboundNA
     |otherwise = BasicUnboundNA
+
+  getEntry (BasicUnboundInt val) = cast val
+  getEntry (BasicUnboundDouble val) = cast val
+  getEntry (BasicUnboundRatio val) = cast val
+  getEntry (BasicUnboundString val) = cast val
+  getEntry (BasicUnboundBool val) = cast val
+  getEntry _ = Nothing
 
   isEntryNA BasicUnboundNA = True
   isEntryNA _ = False

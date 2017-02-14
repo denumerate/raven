@@ -48,6 +48,16 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
+Test-suite test-entry
+  type:                exitcode-stdio-1.0
+  main-is:             Entry.Test.hs
+  build-depends:       base >= 4.9
+                     , HUnit
+                     , vector >= 0.11
+                     , raven
+  hs-source-dirs:      src/Raven/Data
+  default-language:    Haskell2010
+
 Test-suite test-table
   type:                exitcode-stdio-1.0
   main-is:             Table.Test.hs
