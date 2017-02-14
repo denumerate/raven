@@ -29,7 +29,7 @@ median :: (Fractional a,Ord a) => [a] -> a
 median [] = 0
 median ls = let len = length ls
                 ls' = sort ls
+                pnt = div len 2
                 in if odd len
-                   then last $ take (div len 2) ls'
-                   else let pnt = div len 2 in
-                          mean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
+                   then last $ take (pnt + 1) ls'
+                   else mean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
