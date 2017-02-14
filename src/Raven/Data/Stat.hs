@@ -3,6 +3,7 @@ module Raven.Data.Stat
   , intMean
   , ratioMean
   , median
+  , intMedian
   )where
 
 import Data.Ratio
@@ -24,7 +25,7 @@ ratioMean [] = 0
 ratioMean ls = let s = sum ls in
   numerator s % ((fromIntegral (length ls)) * (denominator s))
 
--- |median for fractional values
+-- |Median for fractional values
 median :: (Fractional a,Ord a) => [a] -> a
 median [] = 0
 median ls = let len = length ls
@@ -33,3 +34,13 @@ median ls = let len = length ls
                 in if odd len
                    then last $ take (pnt + 1) ls'
                    else mean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
+
+-- |Median for integral values
+intMedian :: (Integral a) => [a] -> Ratio a
+intMedian [] = 0
+intMedian ls = let len = length ls
+                   ls' = sort ls
+                   pnt = div len 2
+               in if odd len
+                   then (last (take (pnt + 1) ls')) % 1
+                   else intMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'

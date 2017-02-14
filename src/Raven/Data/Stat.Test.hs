@@ -19,6 +19,7 @@ allTests = TestList $ runtests mean meanData
            ++ runtests intMean intMeanData
            ++ runtests ratioMean ratioMeanData
            ++ runtests median medianData
+           ++ runtests intMedian intMedianData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -66,3 +67,7 @@ medianData =
   , ("median: norm 2",[4,2,6,8,9,1,5,3,7],5)
   , ("median: norm 3",[5,10,1,4,3,7,6,8,2,9],5.5)
   ]
+
+intMedianData :: (Fractional a) => [(String,[a],Ratio a)]
+intMedianData =
+  []
