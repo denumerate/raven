@@ -5,6 +5,7 @@ import System.Exit
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 
+import Raven.Data.BasicEntry
 import Raven.Data.Entry
 
 main :: IO ()

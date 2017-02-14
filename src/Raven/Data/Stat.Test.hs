@@ -24,6 +24,7 @@ allTests = TestList $ runtests mean meanData
            ++ runtests intMedian intMedianData
            ++ runtests ratioMedian ratioMedianData
            ++ runtests countInstances countInstancesData
+           ++ runtests mode modeData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -103,4 +104,12 @@ countInstancesData =
   , ("countInstances: all repeat",[2,2,2],M.fromList [(2,3)])
   , ("countInstances: norm",[1,2,3,2],
     M.fromList [(1,1),(2,2),(3,1)])
+  ]
+
+modeData :: [(String,[Int],[(Int,Int)])]
+modeData =
+  [ ("mode: empty",[],[])
+  , ("mode: single",[5],[(5,1)])
+  , ("mode: norm",[1,2,3],[(3,1),(2,1),(1,1)])
+  , ("mode: norm 1",[1,2,3,2],[(2,2)])
   ]

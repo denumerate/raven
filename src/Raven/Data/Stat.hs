@@ -6,6 +6,7 @@ module Raven.Data.Stat
   , intMedian
   , ratioMedian
   , countInstances
+  , mode
   )where
 
 import Data.Ratio
@@ -65,6 +66,12 @@ countInstances = foldl' (\acc val -> case M.lookup val acc of
                             Just count -> M.insert val (succ count) acc
                             _ -> M.insert val 1 acc) M.empty
 
--- |Mode average
-mode :: [a] -> Maybe a
-mode = M.lookupMax . countInstances
+-- |Mode average, returns all highest values
+mode :: (Ord a) => [a] -> [(a,Int)]
+mode = foldl' findMaxs [] . M.toList . countInstances
+  where
+    findMaxs [] val = [val]
+    findMaxs acc@((_,aVal):_) val@(_,vVal) = case compare aVal vVal of
+                                               GT -> acc
+                                               EQ -> val:acc
+                                               _ -> [val]

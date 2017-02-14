@@ -1,4 +1,4 @@
-module BasicEntry
+module Raven.Data.BasicEntry
   ( BasicEntry (..)
   )where
 
