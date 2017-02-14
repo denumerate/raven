@@ -26,6 +26,12 @@ runtests f ls = map (uncurry (~:)) (createtest f ls)
 createtest :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [(String,Test)]
 createtest f = map (\(s,x,y) -> (s,TestCase $ y @=? f x))
 
+--Test values:
+
+navector = V.fromList $ map readEntry ["NA","NA","NA"]
+
 getEntryVectorData :: [(String,Vector BasicEntry,Vector Int)]
 getEntryVectorData =
-  [("getEntryVector: empty",V.empty,V.empty)]
+  [ ("getEntryVector: empty",V.empty,V.empty)
+  , ("getEntryVector: all NA's",navector,V.empty)
+  ]
