@@ -36,10 +36,16 @@ vector1 = ["1","2","3"]
 
 vector2 = ["1","NA","2"]
 
+vector3 = ["1","2.0","2","NA"]
+
+vector4 = ["test","NA","4","3/4"]
+
 getEntriesData :: [(String,Vector BasicEntry,[Int])]
 getEntriesData =
   [ ("getEntries: empty",V.empty,[])
   , ("getEntries: all NA's",readVector navector,[])
   , ("getEntries: norm",readVector vector1,[1..3])
   , ("getEntries: some NA'a",readVector vector2,[1,2])
+  , ("getEntries: mixed",readVector vector3,[1,2])
+  , ("getEntries: mised 1",readVector vector4,[4])
   ]
