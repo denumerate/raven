@@ -25,6 +25,9 @@ allTests = TestList $ runtests mean meanData
            ++ runtests ratioMedian ratioMedianData
            ++ runtests countInstances countInstancesData
            ++ runtests mode modeData
+           ++ runtests variance varianceData
+           ++ runtests intVariance intVarianceData
+           ++ runtests ratioVariance ratioVarianceData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -113,3 +116,15 @@ modeData =
   , ("mode: norm",[1,2,3],[(3,1),(2,1),(1,1)])
   , ("mode: norm 1",[1,2,3,2],[(2,2)])
   ]
+
+varianceData :: [(String,[Float],Float)]
+varianceData =
+  []
+
+intVarianceData :: [(String,[Int],Ratio Int)]
+intVarianceData =
+  []
+
+ratioVarianceData :: [(String,[Ratio Int],Ratio Int)]
+ratioVarianceData =
+  []
