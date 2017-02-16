@@ -8,6 +8,9 @@ module Raven.Data.Stat
   , countInstances
   , mode
   , range
+  , variance
+  , intVariance
+  , ratioVariance
   )where
 
 import Data.Ratio
@@ -81,3 +84,18 @@ mode = foldl' findMaxs [] . M.toList . countInstances
 range :: (Ord a) => [a] -> Maybe (a,a)
 range [] = Nothing
 range ls = Just (minimum ls, maximum ls)
+
+-- |Variance for Floating values
+variance :: (Floating a) => [a] -> a
+variance ls = let mn = mean ls in
+  mean $ map (\val -> (val - mn) ** 2) ls
+
+-- |Variance for Integral values
+intVariance :: (Integral a) => [a] -> Ratio a
+intVariance ls = let mn = intMean ls in
+  ratioMean $ map (\val -> ((val % 1) - mn) ^^ 2) ls
+
+-- |Variance for ratios
+ratioVariance :: (Integral a) => [Ratio a] -> Ratio a
+ratioVariance ls = let mn = ratioMean ls in
+  ratioMean $ map (\val -> (val - mn) ^^ 2) ls

@@ -25,7 +25,6 @@ class Entry a where
   -- |Returns an NA
   na :: a
 
-
 -- |Pulls the entry into a vector of a specific type, ignoring NA's and using getEnrty
 getEntries :: (Entry a,Typeable b) => Vector a -> [b]
 getEntries = reverse . V.foldl' (\acc val -> case getEntry val of
