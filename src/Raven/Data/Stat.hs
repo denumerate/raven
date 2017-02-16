@@ -7,6 +7,7 @@ module Raven.Data.Stat
   , ratioMedian
   , countInstances
   , mode
+  , range
   )where
 
 import Data.Ratio
@@ -75,3 +76,8 @@ mode = foldl' findMaxs [] . M.toList . countInstances
                                                GT -> acc
                                                EQ -> val:acc
                                                _ -> [val]
+
+-- |calculates the range of a list
+range :: (Ord a) => [a] -> Maybe (a,a)
+range [] = Nothing
+range ls = Just (minimum ls, maximum ls)
