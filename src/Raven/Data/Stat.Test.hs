@@ -119,12 +119,26 @@ modeData =
 
 varianceData :: [(String,[Float],Float)]
 varianceData =
-  []
+  [ ("variance: empty",[],0)
+  , ("variance: single",[3.43],0)
+  , ("variance: zero",[7.1,7.1,7.1,7.1],0)
+  , ("variance: norm",[1,2,3],2/3)
+  , ("variance: norm 1",[1/2,3/2,4],13/6)
+  ]
 
 intVarianceData :: [(String,[Int],Ratio Int)]
 intVarianceData =
-  []
+  [ ("intVariance: empty",[],0)
+  , ("intVariance: single",[5],0)
+  , ("intVariance: zero",[2,2,2,2],0)
+  , ("intVariance: norm",[1,2,3],2%3)
+  , ("intVariance: norm 1",[0,3,4,5],7%2)
+  ]
 
 ratioVarianceData :: [(String,[Ratio Int],Ratio Int)]
 ratioVarianceData =
-  []
+  [ ("ratioVariance: empty",[],0)
+  , ("ratioVariance: single",[4%7],0)
+  , ("ratioVariance: zero",[2%7,2%7,2%7,2%7],0)
+  , ("ratioVariance: norm",[1,2,3],2%3)
+  ]
