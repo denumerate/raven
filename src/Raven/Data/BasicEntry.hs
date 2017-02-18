@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Raven.Data.BasicEntry
   ( BasicEntry (..)
   )where
@@ -6,9 +7,11 @@ import Data.Ratio
 import qualified Data.Text as Text
 import Data.Text (Text)
 import Data.Typeable
+import qualified Data.Vector as V
 import Text.Read
 
 import Raven.Data.Entry
+import Raven.Data.Stat
 
 -- |BasicEntry creates a simple entry with bounded values
 data BasicEntry = BasicInt Int
@@ -38,3 +41,53 @@ instance Entry BasicEntry where
   isEntryNA _ = False
 
   na = BasicNA
+
+  summary vs
+    |V.null vs = "Empty vector"
+    |length (getEntries vs :: [Int]) /= 0 = let vs' = (getEntries vs :: [Int]) in
+       Text.concat [ "Mean: ", (Text.pack . show . intMean) vs'
+                   , "\nMedian: ", (Text.pack . show . intMedian) vs'
+                   , "\nMode: ", (Text.pack . show . mode) vs'
+                   , "\nMinimum: ", (Text.pack . show . minimum) vs'
+                   , "\nMaximum: ", (Text.pack . show . maximum) vs'
+                   , "\nStandard Deviation: "
+                   , (Text.pack . show . intStdDeviation) vs'
+                   , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
+                   , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
+                   ]
+    |length (getEntries vs :: [Double]) /= 0 =
+       let vs' = (getEntries vs :: [Double]) in
+         Text.concat [ "Mean: ", (Text.pack . show . mean) vs'
+                     , "\nMedian: ", (Text.pack . show . median) vs'
+                     , "\nMode: ", (Text.pack . show . mode) vs'
+                     , "\nMinimum: ", (Text.pack . show . minimum) vs'
+                     , "\nMaximum: ", (Text.pack . show . maximum) vs'
+                     , "\nStandard Deviation: "
+                     , (Text.pack . show . stdDeviation) vs'
+                     , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
+                     , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
+                     ]
+    |length (getEntries vs :: [Ratio Int]) /= 0 =
+       let vs' = (getEntries vs :: [Ratio Int]) in
+         Text.concat [ "Mean: ", (Text.pack . show . ratioMean) vs'
+                     , "\nMedian: ", (Text.pack . show . ratioMedian) vs'
+                     , "\nMode: ", (Text.pack . show . mode) vs'
+                     , "\nMinimum: ", (Text.pack . show . minimum) vs'
+                     , "\nMaximum: ", (Text.pack . show . maximum) vs'
+                     , "\nStandard Deviation: "
+                     , (Text.pack . show . ratioStdDeviation) vs'
+                     , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
+                     , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
+                     ]
+    |length (getEntries vs :: [Bool]) /= 0 =
+       let vs' = (getEntries vs :: [Bool]) in
+         Text.concat [ "Breakdown: ", (Text.pack . show . countInstances) vs'
+                     , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
+                     , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
+                     ]
+    |otherwise =
+       let vs' = (getEntries vs :: [String]) in
+         Text.concat [ "Top Entry: ", (Text.pack . show . mode) vs'
+                     , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
+                     , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
+                     ]
