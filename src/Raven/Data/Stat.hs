@@ -11,6 +11,9 @@ module Raven.Data.Stat
   , variance
   , intVariance
   , ratioVariance
+  , stdDeviation
+  , intStdDeviation
+  , ratioStdDeviation
   )where
 
 import Data.Ratio
@@ -99,3 +102,17 @@ intVariance ls = let mn = intMean ls in
 ratioVariance :: (Integral a) => [Ratio a] -> Ratio a
 ratioVariance ls = let mn = ratioMean ls in
   ratioMean $ map (\val -> (val - mn) ^^ 2) ls
+
+-- |Standard Deviation for Floating values
+stdDeviation :: (Floating a) => [a] -> a
+stdDeviation = sqrt . variance
+
+-- |Standard Deviation for Integral values
+intStdDeviation :: (Integral a,Floating b) => [a] -> b
+intStdDeviation ls = let var = intVariance ls in
+  sqrt $ (fromIntegral . numerator) var / (fromIntegral . denominator) var
+
+-- |Standard Deviation for Ratio values
+ratioStdDeviation :: (Integral a,Floating b) => [Ratio a] -> b
+ratioStdDeviation ls = let var = ratioVariance ls in
+  sqrt $ (fromIntegral . numerator) var / (fromIntegral . denominator) var
