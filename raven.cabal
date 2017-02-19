@@ -21,6 +21,7 @@ executable raven
   other-modules:       Raven.REPL
                        Raven.Server
                        Raven.Server.NodeMsgs
+                       Raven.Server.ServerNode
                        Raven.Server.ConnNode
                        Raven.Server.REPLNode
                        Raven.Client

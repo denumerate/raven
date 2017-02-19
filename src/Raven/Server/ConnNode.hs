@@ -2,6 +2,7 @@ module Raven.Server.ConnNode
   ( ConnNode
   , newConnNode
   , handleReceived
+  , cleanConnNode
   )where
 
 import Network.Transport
@@ -42,3 +43,8 @@ handleReceived pid [msg] (connNode,self) = readMVar pid >>=
   (\pid' -> readMVar self >>=
     (\self' -> runProcess connNode
       (Control.Distributed.Process.send pid' (self',REPLMsg (B.unpack msg)))))
+
+cleanConnNode :: ConnNode -> IO ()
+cleanConnNode (connNode,self) = readMVar self >>=
+  (\self' -> runProcess connNode
+    (exit self' "Cleaning Node"))
