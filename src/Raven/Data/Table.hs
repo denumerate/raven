@@ -8,6 +8,7 @@ module Raven.Data.Table
   , nRows
   , empty
   , buildTable
+  , tableSummary
   , getColByIndex
   , getColByTitle
   , addColumn
@@ -25,6 +26,9 @@ module Raven.Data.Table
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Data.Text (Text)
+import qualified Data.Text as Text
+
+import Raven.Data.Entry
 
 type Titles = Vector Text
 
@@ -71,6 +75,15 @@ buildTable titles vectors
         then Left $ Table titles vectors
         else Right columnLengthError
   |otherwise = Right titleNumberError
+
+-- |Uses Entry's summary function to get summaries on all columns
+tableSummary :: (Entry a) => Table a -> [Text]
+tableSummary (Table ttls cols) = reverse $ V.ifoldl' compile [] cols
+  where
+    compile acc ind val = (Text.concat [ ttls V.! ind
+                                       , ": \n"
+                                       , summary val
+                                       ]):acc
 
 -- |Pulls a column from the table by column index
 -- O(1)
