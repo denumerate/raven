@@ -22,6 +22,7 @@ initClient ip portNum serverAdrs = withSocketsDo $
             Right end' -> connect end' serverAdrs ReliableOrdered defaultConnectHints >>=
               (\conn -> case conn of
                   Right conn' ->
+                    putStrLn "Client Endpoint running" >>
                     forkIO (listenAtEnd end') >>
                     forever (getAndSendLine conn')
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
@@ -43,5 +44,5 @@ listenAtEnd end = receive end >>=
 
 getAndSendLine :: Connection -> IO ()
 getAndSendLine conn = getLine >>=
-  (\line -> Network.Transport.send conn [B.pack line]) >>
+  (\line -> putStrLn line >> Network.Transport.send conn [B.pack line]) >>
   return ()

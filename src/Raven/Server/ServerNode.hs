@@ -23,45 +23,44 @@ newServerNode trans end running = newLocalNode trans initRemoteTable >>=
     (\replNode -> newEmptyMVar >>=
       (\pid ->
           runProcess node
-          (spawnLocal (liftIO (listenAtEnd trans pid end running Map.empty)) >>
-           spawnLocal (forever (receiveWait
+          (spawnLocal (forever (receiveWait
                                  [match (handleREPL replNode)])) >>=
-           liftIO . putMVar pid)) >>
-    forkIO (cleanNodes node replNode running) >>
-    return ()))
+           liftIO . putMVar pid) >>
+        forkIO (listenAtEnd trans pid end Map.empty) >>
+        forkIO (cleanNodes node trans replNode running) >>
+        return ())))
 
 -- |Listen for and handle events from the endpoint.
 -- The pid is the id of the node's listening process
-listenAtEnd :: Transport -> MVar ProcessId -> EndPoint -> MVar Bool ->
+listenAtEnd :: Transport -> MVar ProcessId -> EndPoint ->
   Map ConnectionId (MVar ConnNode) -> IO ()
-listenAtEnd trans pid end running conns = readMVar running >>=
-  (\running' -> if running'
-    then receive end >>=
-         (\event -> case event of
-             ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
-               (\cNode -> forkIO
-                 (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
-                  (\conn -> case conn of
-                      Right conn' -> newConnNode trans conn' >>=
-                        putMVar cNode
-                      _ -> putStrLn "Connection failed")) >> --move to log
-                 listenAtEnd trans pid end running (Map.insert cid cNode conns))
-             Received cid info -> forkIO
-               (case Map.lookup cid conns of
-                  Just conn -> readMVar conn >>=
-                    handleReceived pid info >>
-                    return ()
-                  Nothing -> putStrLn "Connection not found") >> --move to log
-                    listenAtEnd trans pid end running conns
-             ConnectionClosed cid -> listenAtEnd trans pid end running $
-               Map.delete cid conns
-             EndPointClosed -> putStrLn "Server Closing" --log?
-             _ -> putStrLn "Missing case") --move to log
-    else putStrLn "Server Closing" >> --log?
-         Map.foldl' clean (return ()) conns >>
-         return ())
+listenAtEnd trans pid end conns = receive end >>=
+  (\event -> case event of
+      ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
+             (\cNode -> forkIO
+               (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
+                 (\conn -> case conn of
+                     Right conn' -> newConnNode trans conn' >>=
+                           putMVar cNode
+                     _ -> putStrLn "Connection failed")) >> --move to log
+                 listenAtEnd trans pid end (Map.insert cid cNode conns))
+      Received cid info -> forkIO
+             (case Map.lookup cid conns of
+                 Just conn -> readMVar conn >>=
+                              handleReceived pid info >>
+                              return ()
+                 Nothing -> putStrLn "Connection not found") >> --move to log
+             listenAtEnd trans pid end conns
+      ConnectionClosed cid -> readMVar (conns Map.! cid) >>=
+                              cleanConnNode >>
+                              listenAtEnd trans pid end
+                              (Map.delete cid conns)
+      EndPointClosed -> putStrLn "Server Closing" >> --log?
+                        return (Map.map clean conns) >>
+                        return ()
+      _ -> putStrLn "Missing case") --move to log
   where
-    clean acc val = acc >>
+    clean val =
       readMVar val >>=
       cleanConnNode
 
@@ -70,11 +69,12 @@ handleREPL :: REPLNode -> (ProcessId,REPLMsg) -> Process ()
 handleREPL replNode msg = liftIO (readMVar replNode) >>=
   (\replNode' -> Control.Distributed.Process.send replNode' msg)
 
--- |Clean up all connected nodes if the MVar is false (not running anymore).
+-- |Clean up all connected nodes if the MVar is false (not running anymore),
+-- then closes the transport layer
 -- Note that connNodes are cleaned up by the listen process
-cleanNodes :: LocalNode -> REPLNode -> MVar Bool -> IO ()
-cleanNodes sNode rNode running = readMVar running >>=
+cleanNodes :: LocalNode -> Transport -> REPLNode -> MVar Bool -> IO ()
+cleanNodes sNode trans rNode running = readMVar running >>=
   (\running' -> if running'
-    then cleanNodes sNode rNode running
-    else runProcess sNode
-         (cleanREPLNode rNode))
+                then cleanNodes sNode trans rNode running
+                else runProcess sNode (cleanREPLNode rNode) >>
+                     closeTransport trans)
