@@ -44,7 +44,8 @@ handleReceived pid [msg] (connNode,self) = readMVar pid >>=
     (\self' -> runProcess connNode
       (Control.Distributed.Process.send pid' (self',REPLMsg (B.unpack msg)))))
 
+-- |Tells the listening process on a connNode to exit
 cleanConnNode :: ConnNode -> IO ()
 cleanConnNode (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
-    (exit self' "Cleaning Node"))
+    (exit self' "Cleaning ConnNode")) --log?

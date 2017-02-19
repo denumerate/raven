@@ -5,6 +5,7 @@ module Raven.Server
 import Network
 import Network.Transport
 import Network.Transport.TCP
+import Control.Concurrent.MVar
 
 import Raven.Server.ServerNode
 
@@ -17,7 +18,8 @@ initServer ip portNum = withSocketsDo $
   (\trans -> case trans of
       Right trans' -> newEndPoint trans' >>=
         (\end -> case end of
-            Right end' -> newServerNode trans' end'
+            Right end' -> newMVar True >>=
+              newServerNode trans' end'
             _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
                  return ())
       _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
