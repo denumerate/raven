@@ -86,7 +86,7 @@ instance Entry BasicEntry where
                      , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                      ]
     |otherwise =
-       let vs' = (getEntries vs :: [String]) in
+       let vs' = (getEntries vs :: [Text]) in
          Text.concat [ "Top Entry: ", (Text.pack . show . mode) vs'
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                      , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
