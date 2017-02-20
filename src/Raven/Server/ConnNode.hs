@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Raven.Server.ConnNode
   ( ConnNode
   , newConnNode
@@ -39,6 +40,8 @@ sendResult conn (ProcessedMsg msg) =
 -- |Handles the data send by a received event
 -- needs the servers process id
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
+handleReceived pid [":kill"] (connNode,_) = runProcess connNode
+  (Control.Distributed.Process.send pid (KillMsg "test"))
 handleReceived pid [msg] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send pid (self',REPLMsg (B.unpack msg))))
@@ -47,4 +50,4 @@ handleReceived pid [msg] (connNode,self) = readMVar self >>=
 cleanConnNode :: ConnNode -> IO ()
 cleanConnNode (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
-    (exit self' "Cleaning ConnNode")) --log?
+    (exit self' ("Cleaning ConnNode" :: ByteString))) --log?

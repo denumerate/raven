@@ -6,7 +6,6 @@ import Network
 import Network.Transport
 import Network.Transport.TCP
 import Control.Concurrent
-import Control.Monad (forever)
 
 import qualified Data.ByteString.Char8 as B
 
@@ -24,7 +23,7 @@ initClient ip portNum serverAdrs = withSocketsDo $
                   Right conn' ->
                     putStrLn "Client Endpoint running" >>
                     forkIO (listenAtEnd end') >>
-                    forever (getAndSendLine conn')
+                    getAndSendLine conn'
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
                     return ())
             _ -> putStrLn "Endpoint not initialized, Client Failed" >> --move to log
@@ -38,11 +37,13 @@ listenAtEnd end = receive end >>=
   (\event -> case event of
       Received _ info -> forkIO (print info) >>
         listenAtEnd end
-      ConnectionClosed _ -> putStrLn "Connection Closed"
-      EndPointClosed -> putStrLn "EndPoint Closed"
+      ConnectionClosed _ -> putStrLn "Connection Closed (Client)"
+      EndPointClosed -> putStrLn "EndPoint Closed (Client)"
       _ -> listenAtEnd end)
 
 getAndSendLine :: Connection -> IO ()
 getAndSendLine conn = getLine >>=
-  (\line -> Network.Transport.send conn [B.pack line]) >>
-  return ()
+  (\line -> Network.Transport.send conn [B.pack line] >>
+    if line == ":kill"
+    then return ()
+    else getAndSendLine conn)

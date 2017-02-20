@@ -35,6 +35,7 @@ executable raven
                      , containers >= 0.5
                      , bytestring >= 0.10
                      , binary >= 0.8
+                     , text >= 1.2
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -threaded -with-rtsopts=-N

@@ -11,15 +11,14 @@ import Raven.Server.ServerNode
 -- |Start the server and listen for connections at the supplied ip:port number.
 -- Returns the address of the server endpoint (if successful)
 -- All async
-initServer :: String -> String -> IO (Maybe Transport)
+initServer :: String -> String -> IO ()
 initServer ip portNum = withSocketsDo $
   createTransport ip portNum defaultTCPParameters >>=
   (\trans -> case trans of
       Right trans' -> newEndPoint trans' >>=
         (\end -> case end of
-            Right end' -> newServerNode trans' end' >>
-              return (Just trans')
+            Right end' -> newServerNode trans' end'
             _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
-                 return (Just trans'))
+                 return ())
       _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
-        return Nothing)
+        return ())
