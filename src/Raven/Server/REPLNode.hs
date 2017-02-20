@@ -28,6 +28,7 @@ newREPLNode trans server = newEmptyMVar >>=
          runProcess replNode
         (spawnLocal (forever (receiveWait
                               [ match (runREPL interpS)
+                              , match handleKill
                               , matchUnknown (catchAllMsgs' server "REPLNode")
                               ])) >>=
          liftIO . putMVar pid) >>
@@ -43,7 +44,7 @@ runREPL interpS (pid,(REPLMsg value)) = spawnLocal
    Control.Distributed.Process.send pid . ProcessedMsg) >>
   return ()
 
--- |Tells the listening process on a REPLNode to exit
-cleanREPLNode :: REPLNode -> Process ()
-cleanREPLNode self = liftIO (readMVar self) >>=
-  (`exit` "Cleaning REPLNode") --log?
+-- |Handles a kill message
+handleKill :: KillMsg -> Process ()
+handleKill _ = getSelfPid >>=
+  (`exit` "Clean")

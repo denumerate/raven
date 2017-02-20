@@ -7,6 +7,7 @@ module Raven.Server.NodeMsgs
   , ProcessedMsg(..)
   , KillMsg(..)
   , LogMsg(..)
+  , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
   ) where
@@ -32,13 +33,17 @@ data KillMsg = KillMsg
 data LogMsg = LogMsg String ProcessId String
   deriving (Generic,Binary,Typeable)
 
+-- |Standardized LogMsg
+buildLogMsg :: String -> Process LogMsg
+buildLogMsg msg = getSelfPid >>=
+  (\self -> liftIO getCurrentTime >>=
+    (\time -> return (LogMsg msg self (show time))))
+
 -- |Final check to pick up unmatched messages.
 -- Needs the pid of the listen process, and node type
 catchAllMsgs :: ProcessId -> String -> Process ()
-catchAllMsgs pid node = getSelfPid >>=
-  (\self -> liftIO getCurrentTime >>=
-    (\time -> pid `Control.Distributed.Process.send`
-       (LogMsg (node ++ " did not match a message") self (show time))))
+catchAllMsgs pid node = buildLogMsg (node ++ " did not match a message") >>=
+  Control.Distributed.Process.send pid
 
 -- |CatchAllMsgs with MVar
 catchAllMsgs' :: MVar ProcessId -> String -> Process ()

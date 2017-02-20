@@ -24,11 +24,13 @@ newResourceNode :: Transport -> IO ResourceNode
 newResourceNode trans = doesDirectoryExist "~/.raven" >>=
   (\dirBool -> if dirBool then return () else createDirectory "~/.raven") >>
   openFile "~/.raven/log" AppendMode >>=
-  (\logH -> newLocalNode trans initRemoteTable >>=
+  (\logH -> hSetBuffering logH (BlockBuffering Nothing) >>
+    newLocalNode trans initRemoteTable >>=
     (\node -> newEmptyMVar >>=
       (\pid -> runProcess node
                (spawnLocal (forever (receiveWait
                                      [ match (handleLog logH)
+                                     , match (handleKill logH)
                                      , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                      ])) >>=
                 liftIO . putMVar pid) >>
@@ -43,3 +45,8 @@ cleanResourceNode self = liftIO (readMVar self) >>=
 handleLog :: Handle -> LogMsg -> Process ()
 handleLog h (LogMsg msg pid time) = liftIO $ hPutStrLn h $
   "[" ++ show pid ++ ": " ++ time ++ "] " ++ msg
+
+-- |Handles a kill message
+handleKill :: Handle -> KillMsg -> Process ()
+handleKill h _ = liftIO (hClose h) >>
+  getSelfPid >>= (`exit` "Clean")

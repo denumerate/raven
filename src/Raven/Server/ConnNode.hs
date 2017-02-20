@@ -29,6 +29,7 @@ newConnNode trans server conn = newEmptyMVar >>=
        runProcess connNode
        (spawnLocal (forever (receiveWait
                              [ match (sendResult conn)
+                             , match (handleKill conn)
                              , matchUnknown (catchAllMsgs server "ConnNode")
                              ])) >>=
         liftIO . putMVar pid) >>
@@ -48,9 +49,18 @@ handleReceived pid [":kill"] (connNode,_) = runProcess connNode
 handleReceived pid [msg] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send pid (self',REPLMsg (B.unpack msg))))
+handleReceived pid msg (connNode,_) = runProcess connNode
+  (buildLogMsg
+   ("Received, not recognized from outside connection: " ++ show msg)   >>=
+   Control.Distributed.Process.send pid)
+
+-- |Handle a kill message
+handleKill :: Connection -> KillMsg -> Process ()
+handleKill conn _ = liftIO (close conn) >>
+  getSelfPid >>= (`exit` ("Clean" :: ByteString))
 
 -- |Tells the listening process on a connNode to exit
 cleanConnNode :: ConnNode -> IO ()
 cleanConnNode (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
-    (exit self' ("Cleaning ConnNode" :: ByteString))) --log?
+    (Control.Distributed.Process.send self' KillMsg))
