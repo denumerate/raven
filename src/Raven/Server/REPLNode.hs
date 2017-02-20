@@ -43,4 +43,4 @@ runREPL interpS (pid,(REPLMsg value)) = spawnLocal
 -- |Tells the listening process on a REPLNode to exit
 cleanREPLNode :: REPLNode -> Process ()
 cleanREPLNode self = liftIO (readMVar self) >>=
-  (\self' -> exit self' "Cleaning REPLNode") --log?
+  (`exit` "Cleaning REPLNode") --log?

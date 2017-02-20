@@ -24,6 +24,7 @@ executable raven
                        Raven.Server.ServerNode
                        Raven.Server.ConnNode
                        Raven.Server.REPLNode
+                       Raven.Server.ResourceNode
                        Raven.Client
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10
