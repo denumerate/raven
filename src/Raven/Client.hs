@@ -44,5 +44,5 @@ listenAtEnd end = receive end >>=
 
 getAndSendLine :: Connection -> IO ()
 getAndSendLine conn = getLine >>=
-  (\line -> putStrLn line >> Network.Transport.send conn [B.pack line]) >>
+  (\line -> Network.Transport.send conn [B.pack line]) >>
   return ()

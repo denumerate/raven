@@ -38,11 +38,10 @@ sendResult conn (ProcessedMsg msg) =
 
 -- |Handles the data send by a received event
 -- needs the servers process id
-handleReceived :: MVar ProcessId -> [ByteString] -> ConnNode -> IO ()
-handleReceived pid [msg] (connNode,self) = readMVar pid >>=
-  (\pid' -> readMVar self >>=
-    (\self' -> runProcess connNode
-      (Control.Distributed.Process.send pid' (self',REPLMsg (B.unpack msg)))))
+handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
+handleReceived pid [msg] (connNode,self) = readMVar self >>=
+  (\self' -> runProcess connNode
+    (Control.Distributed.Process.send pid (self',REPLMsg (B.unpack msg))))
 
 -- |Tells the listening process on a connNode to exit
 cleanConnNode :: ConnNode -> IO ()

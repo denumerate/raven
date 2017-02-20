@@ -5,21 +5,21 @@ module Raven.Server
 import Network
 import Network.Transport
 import Network.Transport.TCP
-import Control.Concurrent.MVar
 
 import Raven.Server.ServerNode
 
 -- |Start the server and listen for connections at the supplied ip:port number.
 -- Returns the address of the server endpoint (if successful)
 -- All async
-initServer :: String -> String -> MVar Bool -> IO ()
-initServer ip portNum running = withSocketsDo $
+initServer :: String -> String -> IO (Maybe Transport)
+initServer ip portNum = withSocketsDo $
   createTransport ip portNum defaultTCPParameters >>=
   (\trans -> case trans of
       Right trans' -> newEndPoint trans' >>=
         (\end -> case end of
-            Right end' -> newServerNode trans' end' running
+            Right end' -> newServerNode trans' end' >>
+              return (Just trans')
             _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
-                 return ())
+                 return (Just trans'))
       _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
-        return ())
+        return Nothing)

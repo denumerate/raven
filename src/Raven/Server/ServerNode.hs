@@ -16,25 +16,23 @@ import Raven.Server.ConnNode
 import Raven.Server.REPLNode
 
 -- |Builds a server node and all internal processes
-newServerNode :: Transport -> EndPoint -> MVar Bool -> IO ()
-newServerNode trans end running = newLocalNode trans initRemoteTable >>=
+newServerNode :: Transport -> EndPoint -> IO ()
+newServerNode trans end = newLocalNode trans initRemoteTable >>=
   (\node -> putStrLn ("Server established at " ++ (show . address) end) >>
   newREPLNode trans >>=
-    (\replNode -> newEmptyMVar >>=
-      (\pid ->
-          runProcess node
-          (spawnLocal (forever (receiveWait
-                                 [match (handleREPL replNode)])) >>=
-           liftIO . putMVar pid) >>
-        forkIO (listenAtEnd trans pid end Map.empty) >>
-        forkIO (cleanNodes node trans replNode running) >>
-        return ())))
+    (\replNode -> runProcess node
+      (spawnLocal (forever (receiveWait
+                             [ match (handleREPL replNode)
+                             , match (handleKill trans replNode)
+                             ])) >>=
+       spawnLocal . liftIO . listenAtEnd trans end Map.empty >>
+       return ())))
 
 -- |Listen for and handle events from the endpoint.
 -- The pid is the id of the node's listening process
-listenAtEnd :: Transport -> MVar ProcessId -> EndPoint ->
-  Map ConnectionId (MVar ConnNode) -> IO ()
-listenAtEnd trans pid end conns = receive end >>=
+listenAtEnd :: Transport -> EndPoint ->
+  Map ConnectionId (MVar ConnNode) -> ProcessId -> IO ()
+listenAtEnd trans end conns pid = receive end >>=
   (\event -> case event of
       ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
              (\cNode -> forkIO
@@ -43,18 +41,18 @@ listenAtEnd trans pid end conns = receive end >>=
                      Right conn' -> newConnNode trans conn' >>=
                            putMVar cNode
                      _ -> putStrLn "Connection failed")) >> --move to log
-                 listenAtEnd trans pid end (Map.insert cid cNode conns))
+                 listenAtEnd trans end (Map.insert cid cNode conns) pid)
       Received cid info -> forkIO
              (case Map.lookup cid conns of
                  Just conn -> readMVar conn >>=
                               handleReceived pid info >>
                               return ()
                  Nothing -> putStrLn "Connection not found") >> --move to log
-             listenAtEnd trans pid end conns
+             listenAtEnd trans end conns pid
       ConnectionClosed cid -> readMVar (conns Map.! cid) >>=
                               cleanConnNode >>
-                              listenAtEnd trans pid end
-                              (Map.delete cid conns)
+                              listenAtEnd trans end
+                              (Map.delete cid conns) pid
       EndPointClosed -> putStrLn "Server Closing" >> --log?
                         return (Map.map clean conns) >>
                         return ()
@@ -69,12 +67,7 @@ handleREPL :: REPLNode -> (ProcessId,REPLMsg) -> Process ()
 handleREPL replNode msg = liftIO (readMVar replNode) >>=
   (\replNode' -> Control.Distributed.Process.send replNode' msg)
 
--- |Clean up all connected nodes if the MVar is false (not running anymore),
--- then closes the transport layer
--- Note that connNodes are cleaned up by the listen process
-cleanNodes :: LocalNode -> Transport -> REPLNode -> MVar Bool -> IO ()
-cleanNodes sNode trans rNode running = readMVar running >>=
-  (\running' -> if running'
-                then cleanNodes sNode trans rNode running
-                else runProcess sNode (cleanREPLNode rNode) >>
-                     closeTransport trans)
+-- |Handles a KillMsg
+handleKill :: Transport -> REPLNode -> KillMsg -> Process ()
+handleKill trans replNode _ = cleanREPLNode replNode >>
+  liftIO (closeTransport trans)
