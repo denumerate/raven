@@ -1,6 +1,6 @@
 module Raven.Server.ResourceNode
   ( ResourceNode
-  , buildResourceNode
+  , newResourceNode
   , cleanResourceNode
   )where
 
@@ -20,15 +20,17 @@ type ResourceNode = MVar ProcessId
 
 -- |Builds and returns the node.
 -- Needs the transport layer and Maybe a logging level (Standard is default)
-buildResourceNode :: Transport -> IO ResourceNode
-buildResourceNode trans = doesDirectoryExist "~/.raven" >>=
+newResourceNode :: Transport -> IO ResourceNode
+newResourceNode trans = doesDirectoryExist "~/.raven" >>=
   (\dirBool -> if dirBool then return () else createDirectory "~/.raven") >>
   openFile "~/.raven/log" AppendMode >>=
   (\logH -> newLocalNode trans initRemoteTable >>=
     (\node -> newEmptyMVar >>=
       (\pid -> runProcess node
-               (spawnLocal (forever (receiveWait [ match (handleLog logH)
-                                                 ])) >>=
+               (spawnLocal (forever (receiveWait
+                                     [ match (handleLog logH)
+                                     , matchUnknown (catchAllMsgs' pid "ResourceNode")
+                                     ])) >>=
                 liftIO . putMVar pid) >>
                return pid)))
 

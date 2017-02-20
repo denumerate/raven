@@ -21,13 +21,16 @@ import Raven.Server.NodeMsgs
 type ConnNode = (LocalNode,MVar ProcessId)
 
 -- |Builds and returns node to handle connections.
--- Needs the transport layer, and the established connection
-newConnNode :: Transport -> Connection -> IO ConnNode
-newConnNode trans conn = newEmptyMVar >>=
+-- Needs the transport layer, server id, and the established connection
+newConnNode :: Transport -> ProcessId -> Connection -> IO ConnNode
+newConnNode trans server conn = newEmptyMVar >>=
   (\pid -> newLocalNode trans initRemoteTable >>=
     (\connNode ->
        runProcess connNode
-       (spawnLocal (forever (receiveWait [match (sendResult conn)])) >>=
+       (spawnLocal (forever (receiveWait
+                             [ match (sendResult conn)
+                             , matchUnknown (catchAllMsgs server "ConnNode")
+                             ])) >>=
         liftIO . putMVar pid) >>
        return (connNode,pid)))
 

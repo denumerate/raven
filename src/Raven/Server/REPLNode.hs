@@ -19,14 +19,17 @@ import Raven.REPL
 type REPLNode = MVar ProcessId
 
 -- |Builds and returns the node to handle the RELP
--- Needs the transport layer
-newREPLNode :: Transport -> IO REPLNode
-newREPLNode trans = newEmptyMVar >>=
+-- Needs the transport layer and server node
+newREPLNode :: Transport -> MVar ProcessId -> IO REPLNode
+newREPLNode trans server = newEmptyMVar >>=
   (\pid -> newEmptyMVar >>=
     (\interpS -> newLocalNode trans initRemoteTable >>=
       (\replNode ->
          runProcess replNode
-        (spawnLocal (forever (receiveWait [match (runREPL interpS)])) >>=
+        (spawnLocal (forever (receiveWait
+                              [ match (runREPL interpS)
+                              , matchUnknown (catchAllMsgs' server "REPLNode")
+                              ])) >>=
          liftIO . putMVar pid) >>
         putMVar interpS initREPL >>
         return pid)))
