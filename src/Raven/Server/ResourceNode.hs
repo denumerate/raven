@@ -1,6 +1,5 @@
 module Raven.Server.ResourceNode
-  ( LogLevel(..)
-  , ResourceNode
+  ( ResourceNode
   , buildResourceNode
   , cleanResourceNode
   )where
@@ -11,25 +10,25 @@ import Control.Distributed.Process.Node
 import Control.Concurrent
 import Control.Monad(forever)
 
--- |Indicates to what extent events are logged
-data LogLevel = None
-              | Standard
-              | Verbose
+import System.IO
+import System.Directory
+
+import Raven.Server.NodeMsgs
 
 -- |Stores the ProcessId of the listen process
 type ResourceNode = MVar ProcessId
 
 -- |Builds and returns the node.
 -- Needs the transport layer and Maybe a logging level (Standard is default)
-buildResourceNode :: Transport -> Maybe LogLevel -> IO ResourceNode
-buildResourceNode trans logLvl =
-  (case logLvl of
-      Just lvl -> newMVar lvl
-      _ -> newMVar Standard) >>=
-  (\logLvl' -> newLocalNode trans initRemoteTable >>=
+buildResourceNode :: Transport -> IO ResourceNode
+buildResourceNode trans = doesDirectoryExist "~/.raven" >>=
+  (\dirBool -> if dirBool then return () else createDirectory "~/.raven") >>
+  openFile "~/.raven/log" AppendMode >>=
+  (\logH -> newLocalNode trans initRemoteTable >>=
     (\node -> newEmptyMVar >>=
       (\pid -> runProcess node
-               (spawnLocal (forever (receiveWait [])) >>=
+               (spawnLocal (forever (receiveWait [ match (handleLog logH)
+                                                 ])) >>=
                 liftIO . putMVar pid) >>
                return pid)))
 
@@ -37,3 +36,8 @@ buildResourceNode trans logLvl =
 cleanResourceNode :: ResourceNode -> Process ()
 cleanResourceNode self = liftIO (readMVar self) >>=
   (`exit` "Cleaning ResourceNode")
+
+-- |Handles a log message
+handleLog :: Handle -> LogMsg -> Process ()
+handleLog h (LogMsg msg pid time) = liftIO $ hPutStrLn h $
+  "[" ++ show pid ++ ": " ++ time ++ "] " ++ msg
