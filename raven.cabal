@@ -8,7 +8,7 @@ synopsis:            N/A
 homepage:            N/A
 license:             BSD3
 license-file:        LICENSE
-author:              denumerate
+author:              Paul Ricks
 maintainer:          pauljricks@gmail.com
 -- copyright:           
 category:            Data
@@ -21,6 +21,7 @@ executable raven
   other-modules:       Raven.REPL
                        Raven.Server
                        Raven.Server.NodeMsgs
+                       Raven.Server.ServerNode
                        Raven.Server.ConnNode
                        Raven.Server.REPLNode
                        Raven.Client
@@ -34,8 +35,10 @@ executable raven
                      , containers >= 0.5
                      , bytestring >= 0.10
                      , binary >= 0.8
+                     , text >= 1.2
   hs-source-dirs:      src
   default-language:    Haskell2010
+  ghc-options:         -threaded -with-rtsopts=-N
 
 library
   exposed-modules:     Raven.Data.Entry
