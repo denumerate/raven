@@ -26,7 +26,7 @@ newResourceNode trans =
   setCurrentDirectory >>
   createDirectoryIfMissing False ".raven" >>
   openFile ".raven/log.txt" AppendMode >>=
-  (\logH -> hSetBuffering logH (BlockBuffering Nothing) >>
+  (\logH -> hSetBuffering logH LineBuffering >>
     newLocalNode trans initRemoteTable >>=
     (\node -> newEmptyMVar >>=
       (\pid -> runProcess node
