@@ -45,5 +45,5 @@ getAndSendLine :: Connection -> IO ()
 getAndSendLine conn = getLine >>=
   (\line -> Network.Transport.send conn [B.pack line] >>
     if line == ":kill"
-    then return ()
+    then threadDelay 32000000
     else getAndSendLine conn)

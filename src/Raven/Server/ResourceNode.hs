@@ -50,5 +50,6 @@ handleLog h (LogMsg msg pid time) = liftIO $ hPutStrLn h $
 
 -- |Handles a kill message
 handleKill :: Handle -> KillMsg -> Process ()
-handleKill h _ = liftIO (hClose h) >>
+handleKill h _ =
+  liftIO (hClose h) >>
   getSelfPid >>= (`exit` "Clean")

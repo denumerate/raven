@@ -36,8 +36,8 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                 , match (handleKill trans end replNode resNode)
                                 , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                 ])) >>=
-           (\lpid -> (spawnLocal . liftIO . listenAtEnd trans end node Map.empty) lpid >>
-                     liftIO (putMVar serverpid lpid)) >>
+            (\lpid -> (spawnLocal . liftIO . listenAtEnd trans end node Map.empty) lpid >>
+                      liftIO (putMVar serverpid lpid)) >>
            return ())))))
 
 -- |Listen for and handle events from the endpoint.
@@ -56,8 +56,8 @@ listenAtEnd trans end serverN conns pid = receive end >>=
                      Left err ->
                        runProcess serverN
                            (buildLogMsg
-                             ("Connection not established with " ++ show adrs
-                               ++ ": " ++ show err) >>=
+                             ("Connection failed with " ++ show adrs
+                               ++ ". " ++ show err) >>=
                              Control.Distributed.Process.send pid))) >>
                listenAtEnd trans end serverN (Map.insert cid cNode conns) pid)
       Received cid info -> forkIO
@@ -87,11 +87,13 @@ listenAtEnd trans end serverN conns pid = receive end >>=
 -- |Handles a REPLMsg
 handleREPL :: REPLNode -> (ProcessId,REPLMsg) -> Process ()
 handleREPL replNode msg = liftIO (readMVar replNode) >>=
-  (\replNode' -> Control.Distributed.Process.send replNode' msg)
+  (`Control.Distributed.Process.send` msg)
 
 -- |Handles a KillMsg
 handleKill :: Transport -> EndPoint -> REPLNode -> ResourceNode -> KillMsg -> Process ()
-handleKill trans end replNode resNode _ = liftIO (readMVar resNode) >>=
+handleKill trans end replNode resNode _ =
+  liftIO (putStrLn "Killing server (30 seconds)") >>
+  liftIO (readMVar resNode) >>=
   (\resNode' ->
       buildLogMsg "Killing Server" >>=
       Control.Distributed.Process.send resNode' >>
