@@ -26,7 +26,7 @@ newResourceNode trans =
   setCurrentDirectory >>
   createDirectoryIfMissing False ".raven" >>
   openFile ".raven/log.txt" AppendMode >>=
-  (\logH -> hSetBuffering logH LineBuffering >>
+  (\logH -> hSetBuffering logH (BlockBuffering Nothing) >>
     newLocalNode trans initRemoteTable >>=
     (\node -> newEmptyMVar >>=
       (\pid -> runProcess node
@@ -45,8 +45,8 @@ cleanResourceNode self = liftIO (readMVar self) >>=
 
 -- |Handles a log message
 handleLog :: Handle -> LogMsg -> Process ()
-handleLog h (LogMsg msg pid time) = liftIO $ hPutStrLn h $
-  "[" ++ show pid ++ ": " ++ time ++ "] " ++ msg
+handleLog h (LogMsg msg pid time) =
+  liftIO (hPutStrLn h ("[" ++ show pid ++ ": " ++ time ++ "] " ++ msg))
 
 -- |Handles a kill message
 handleKill :: Handle -> KillMsg -> Process ()
