@@ -16,6 +16,8 @@ import Raven.Server.ConnNode
 import Raven.Server.REPLNode
 import Raven.Server.ResourceNode
 
+connTimeout = 1800000000
+
 -- |Builds a server node and all internal processes
 newServerNode :: Transport -> EndPoint -> IO ()
 newServerNode trans end = newLocalNode trans initRemoteTable >>=
@@ -30,42 +32,53 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
               Control.Distributed.Process.send resNode') >>
             spawnLocal (forever (receiveWait
                                 [ match (handleREPL replNode)
+                                , match (handleLog resNode)
                                 , match (handleKill trans end replNode resNode)
                                 , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                 ])) >>=
-           (\lpid -> (spawnLocal . liftIO . listenAtEnd trans end Map.empty) lpid >>
+           (\lpid -> (spawnLocal . liftIO . listenAtEnd trans end node Map.empty) lpid >>
                      liftIO (putMVar serverpid lpid)) >>
            return ())))))
 
 -- |Listen for and handle events from the endpoint.
 -- The pid is the id of the node's listening process
-listenAtEnd :: Transport -> EndPoint ->
+listenAtEnd :: Transport -> EndPoint -> LocalNode ->
   Map ConnectionId (MVar ConnNode) -> ProcessId -> IO ()
-listenAtEnd trans end conns pid = receive end >>=
+listenAtEnd trans end serverN conns pid = receive end >>=
   (\event -> case event of
       ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
              (\cNode -> forkIO
-               (Network.Transport.connect end adrs reliabilty defaultConnectHints >>=
+               (Network.Transport.connect end adrs reliabilty
+                (defaultConnectHints{connectTimeout = Just connTimeout}) >>=
                  (\conn -> case conn of
                      Right conn' -> newConnNode trans pid conn' >>=
                            putMVar cNode
-                     _ -> putStrLn "Connection failed")) >> --move to log
-                 listenAtEnd trans end (Map.insert cid cNode conns) pid)
+                     Left err ->
+                       runProcess serverN
+                           (buildLogMsg
+                             ("Connection not established with " ++ show adrs
+                               ++ ": " ++ show err) >>=
+                             Control.Distributed.Process.send pid))) >>
+               listenAtEnd trans end serverN (Map.insert cid cNode conns) pid)
       Received cid info -> forkIO
              (case Map.lookup cid conns of
                  Just conn -> readMVar conn >>=
-                              handleReceived pid info >>
-                              return ()
-                 Nothing -> putStrLn "Connection not found") >> --move to log
-             listenAtEnd trans end conns pid
+                              handleReceived pid info
+                 Nothing -> runProcess serverN
+                            (buildLogMsg "Connection not found in Map" >>=
+                             Control.Distributed.Process.send pid)) >>
+             listenAtEnd trans end serverN conns pid
       ConnectionClosed cid -> readMVar (conns Map.! cid) >>=
                               cleanConnNode >>
-                              listenAtEnd trans end
+                              listenAtEnd trans end serverN
                               (Map.delete cid conns) pid
-      EndPointClosed -> putStrLn "Server Closing" >> --log?
+      EndPointClosed -> putStrLn "EndPoint Closed" >>
                         return (Map.map clean conns) >>
                         return ()
-      _ -> putStrLn "Missing case") --move to log
+      _ -> forkIO (runProcess serverN
+                   (buildLogMsg "Uncaught event at endpoint" >>=
+                    Control.Distributed.Process.send pid)) >>
+           listenAtEnd trans end serverN conns pid)
   where
     clean val =
       readMVar val >>=
@@ -89,3 +102,8 @@ handleKill trans end replNode resNode _ = liftIO (readMVar resNode) >>=
   liftIO (closeEndPoint end) >>
   liftIO (threadDelay 25000000) >>
   liftIO (closeTransport trans)
+
+-- |Handle a LogMsg
+handleLog :: ResourceNode -> LogMsg -> Process ()
+handleLog rNode msg = liftIO (readMVar rNode) >>=
+  (`Control.Distributed.Process.send` msg)
