@@ -25,11 +25,12 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
       (\replNode -> newResourceNode trans >>=
         (\resNode -> runProcess node
           (liftIO (takeMVar resNode) >>=
-           (`Control.Distributed.Process.send`
-             (buildLogMsg ("Server established at " ++ (show . address) end)))
+           (\resNode' ->
+              buildLogMsg ("Server established at " ++ (show . address) end) >>=
+              Control.Distributed.Process.send resNode') >>
             spawnLocal (forever (receiveWait
                                 [ match (handleREPL replNode)
-                                , match (handleKill trans end replNode)
+                                , match (handleKill trans end replNode resNode)
                                 , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                 ])) >>=
            (\lpid -> (spawnLocal . liftIO . listenAtEnd trans end Map.empty) lpid >>
@@ -79,9 +80,10 @@ handleREPL replNode msg = liftIO (readMVar replNode) >>=
 handleKill :: Transport -> EndPoint -> REPLNode -> ResourceNode -> KillMsg -> Process ()
 handleKill trans end replNode resNode _ = liftIO (readMVar resNode) >>=
   (\resNode' ->
-     Control.Distributed.Process.send resNode' (buildLogMsg "Killing Server") >>
-     liftIO (threadDelay 5000000)
-     Control.Distributed.Process.send resNode' KillMsg) >>
+      buildLogMsg "Killing Server" >>=
+      Control.Distributed.Process.send resNode' >>
+      liftIO (threadDelay 5000000) >>
+      Control.Distributed.Process.send resNode' KillMsg) >>
   liftIO (readMVar replNode) >>=
   (`Control.Distributed.Process.send` KillMsg) >>
   liftIO (closeEndPoint end) >>

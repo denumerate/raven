@@ -1,7 +1,6 @@
 module Raven.Server.REPLNode
   ( REPLNode
   , newREPLNode
-  , cleanREPLNode
   )where
 
 import Network.Transport
