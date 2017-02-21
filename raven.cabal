@@ -40,7 +40,11 @@ executable raven
                      , directory >= 1.2
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:         -threaded -with-rtsopts=-N
+  ghc-options:         -threaded
+                       -funfolding-use-threshold=16
+                       -O2
+                       -optc-O3
+                       -rtsopts
 
 library
   exposed-modules:     Raven.Data.Entry
