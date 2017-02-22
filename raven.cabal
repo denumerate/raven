@@ -44,7 +44,7 @@ executable raven
                        -funfolding-use-threshold=16
                        -O2
                        -optc-O3
-                       -rtsopts
+                       -with-rtsopts=-N
 
 library
   exposed-modules:     Raven.Data.Entry

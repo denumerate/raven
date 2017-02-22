@@ -26,7 +26,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
     (\serverpid -> newREPLNode trans serverpid >>=
       (\replNode -> newResourceNode trans >>=
         (\resNode -> runProcess node
-          (liftIO (takeMVar resNode) >>=
+          (liftIO (readMVar resNode) >>=
            (\resNode' ->
               buildLogMsg ("Server established at " ++ (show . address) end) >>=
               Control.Distributed.Process.send resNode') >>
