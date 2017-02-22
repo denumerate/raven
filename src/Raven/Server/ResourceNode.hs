@@ -30,13 +30,13 @@ newResourceNode trans =
     newLocalNode trans initRemoteTable >>=
     (\node -> newEmptyMVar >>=
       (\pid -> runProcess node
-               (spawnLocal (forever (receiveWait
-                                     [ match (handleLog logH)
-                                     , match (handleKill logH)
-                                     , matchUnknown (catchAllMsgs' pid "ResourceNode")
-                                     ])) >>=
-                liftIO . putMVar pid) >>
-               return pid)))
+        (spawnLocal (forever (receiveWait
+                               [ match (handleLog logH)
+                               , match (handleKill logH)
+                               , matchUnknown (catchAllMsgs' pid "ResourceNode")
+                               ])) >>=
+          liftIO . putMVar pid) >>
+        return pid)))
 
 -- |Tells the listening process on a resourceNode to exit
 cleanResourceNode :: ResourceNode -> Process ()
