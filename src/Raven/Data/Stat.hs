@@ -31,12 +31,6 @@ intMean :: (Integral a) => [a] -> Ratio a
 intMean [] = 0
 intMean ls = (sum) ls % (fromIntegral . length) ls
 
--- |Mean for ratios
-ratioMean :: (Integral a) => [Ratio a] -> Ratio a
-ratioMean [] = 0
-ratioMean ls = let s = sum ls in
-  numerator s % ((fromIntegral (length ls)) * (denominator s))
-
 -- |Median for fractional values
 median :: (Fractional a,Ord a) => [a] -> a
 median [] = 0
@@ -56,16 +50,6 @@ intMedian ls = let len = length ls
                in if odd len
                    then (last (take (pnt + 1) ls')) % 1
                    else intMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
-
--- |Median for ratios
-ratioMedian :: (Integral a) => [Ratio a] -> Ratio a
-ratioMedian [] = 0
-ratioMedian ls = let len = length ls
-                     ls' = sort ls
-                     pnt = div len 2
-                 in if odd len
-                    then last (take (pnt + 1) ls')
-                    else ratioMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
 
 -- |Counts the number of times each item in a list occurs
 countInstances :: (Ord a) => [a] -> Map a Int
@@ -96,12 +80,12 @@ variance ls = let mn = mean ls in
 -- |Variance for Integral values
 intVariance :: (Integral a) => [a] -> Ratio a
 intVariance ls = let mn = intMean ls in
-  ratioMean $ map (\val -> ((val % 1) - mn) ^^ 2) ls
+  mean $ map (\val -> ((val % 1) - mn) ^^ 2) ls
 
 -- |Variance for ratios
 ratioVariance :: (Integral a) => [Ratio a] -> Ratio a
-ratioVariance ls = let mn = ratioMean ls in
-  ratioMean $ map (\val -> (val - mn) ^^ 2) ls
+ratioVariance ls = let mn = mean ls in
+  mean $ map (\val -> (val - mn) ^^ 2) ls
 
 -- |Standard Deviation for Floating values
 stdDeviation :: (Floating a) => [a] -> a

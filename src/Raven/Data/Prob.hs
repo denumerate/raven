@@ -42,3 +42,10 @@ subSetProb pSet subSet =
 -- (to avoid the possibility of rounding errors in the predicate).
 eventSeqProb :: (Ord a,Num b) => EventSeq a b -> b
 eventSeqProb = foldl' (\acc (pSet,subSet) -> acc * subSetProb pSet subSet) 1
+
+-- |Calculates the probability that the first event will happen if the second
+-- event has happened, both events being subsets of the ProbSet.
+-- Assumes a valid ProbSet
+-- (to avoid the possibility of rounding errors in the predicate).
+conditionalProb :: ProbSet a b -> [a] -> [b] -> b
+conditionalProb
