@@ -3,6 +3,7 @@ module Raven.Data.Prob
   , EventSeq
   , isValidSet
   , subSetProb
+  , eventSeqProb
   )where
 
 import Data.Map (Map)
@@ -34,3 +35,10 @@ subSetProb pSet subSet =
               return . (+acc'))) (Just 0) subSet of
     Just p -> p
     _ -> 0
+
+-- |Calculates the probability of an EventSeq.
+-- Returns 0 if any empty sets or a missing events.
+-- Assumes a valid ProbSet
+-- (to avoid the possibility of rounding errors in the predicate).
+eventSeqProb :: (Ord a,Num b) => EventSeq a b -> b
+eventSeqProb = foldl' (\acc (pSet,subSet) -> acc * subSetProb pSet subSet) 1

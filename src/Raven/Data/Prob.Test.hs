@@ -3,6 +3,7 @@ module Main(main) where
 import Test.HUnit
 import System.Exit
 import qualified Data.Map as M
+import Data.Ratio
 
 import Raven.Data.Prob
 
@@ -33,6 +34,22 @@ runtests2 f ls = map (uncurry (~:)) (createtest2 f ls)
 createtest2 :: (Eq c,Show c) => (a -> b -> c) -> [(String,a,b,c)] -> [(String,Test)]
 createtest2 f = map (\(s,x,y,z) -> (s,TestCase $ z @=? f x y))
 
+--Test values:
+set1 = M.fromList [(1,2%3),(2,1%3)]
+
+set2 = M.fromList [(1,1%4),(2,1%8),(3,3%8),(4,1%4)]
+
 subSetProbData :: [(String,ProbSet Int Rational,[Int],Rational)]
 subSetProbData =
-  []
+  [ ("subSetProb: empty",M.empty,[],0)
+  , ("subSetProb: empty 1",M.empty,[12,3],0)
+  , ("subSetProb: empty 2",set1,[],0)
+  , ("subSetProb: missing event",set1,[7],0)
+  , ("subSetProb: missing event 1",set1,[2,-1,1],0)
+  , ("subSetProb: all",set1,[1,2],1)
+  , ("subSetProb: all 1",set2,[1..4],1)
+  , ("subSetProb: norm",set1,[2],1%3)
+  , ("subSetProb: norm 1",set2,[3],3%8)
+  , ("subSetProb: norm 2",set2,[1,3,4],7%8)
+  , ("subSetProb: norm 3",set2,[2,4],3%8)
+  ]
