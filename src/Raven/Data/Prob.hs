@@ -4,11 +4,16 @@ module Raven.Data.Prob
   , isValidSet
   , subSetProb
   , eventSeqProb
+  , combineProbSets
+  , getAllEvents
+  , conditionalProb
   )where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.List
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 -- |A set of events mapped to a probability value
 type ProbSet a b = Map a b
@@ -38,14 +43,28 @@ subSetProb pSet subSet =
 
 -- |Calculates the probability of an EventSeq.
 -- Returns 0 if any empty sets or a missing events.
--- Assumes a valid ProbSet
+-- Assumes valid ProbSets
 -- (to avoid the possibility of rounding errors in the predicate).
 eventSeqProb :: (Ord a,Num b) => EventSeq a b -> b
 eventSeqProb = foldl' (\acc (pSet,subSet) -> acc * subSetProb pSet subSet) 1
+
+-- |Combine a list of ProbSets into a single set.
+-- Assumes valid ProbSets
+-- (to avoid the possibility of rounding errors in the predicate).
+combineProbSets :: [ProbSet Text b] -> ProbSet Text b
+combineProbSets [] = Map.empty
+combineProbSets pSets =
+
+-- |Gets all possible names of distinct events given an event sequence.
+-- Treats empty lists as meaning all events are possible.
+-- Ignores missing events.
+getAllEvents :: EventSeq Text b -> [Text]
+getAllEvents
 
 -- |Calculates the probability that the first event will happen if the second
 -- event has happened, both events being subsets of the ProbSet.
 -- Assumes a valid ProbSet
 -- (to avoid the possibility of rounding errors in the predicate).
-conditionalProb :: ProbSet a b -> [a] -> [b] -> b
-conditionalProb
+conditionalProb :: (Ord a,Fractional b) => ProbSet a b -> [a] -> [a] -> b
+conditionalProb pSet e1 e2 = subSetProb pSet (intersect e1 e2) /
+  subSetProb pSet e2
