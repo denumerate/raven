@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Raven.Data.Prob
   ( ProbSet
   , EventSeq
@@ -52,14 +53,18 @@ eventSeqProb = foldl' (\acc (pSet,subSet) -> acc * subSetProb pSet subSet) 1
 -- Assumes valid ProbSets
 -- (to avoid the possibility of rounding errors in the predicate).
 combineProbSets :: [ProbSet Text b] -> ProbSet Text b
-combineProbSets [] = Map.empty
-combineProbSets pSets =
+combineProbSets =
 
 -- |Gets all possible names of distinct events given an event sequence.
 -- Treats empty lists as meaning all events are possible.
--- Ignores missing events.
+-- Includes missing events (be careful).
 getAllEvents :: EventSeq Text b -> [Text]
-getAllEvents
+getAllEvents = foldl' combine []
+  where
+    combine acc (pSet,[]) = let ks = Map.keys pSet in
+      concatMap (\val -> map (\k -> Text.concat [val,";",k]) ks) acc
+    combine acc (_,subSet) =
+      concatMap (\val -> map (\k -> Text.concat [val,";",k]) subSet) acc
 
 -- |Calculates the probability that the first event will happen if the second
 -- event has happened, both events being subsets of the ProbSet.

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 
 import Test.HUnit
@@ -98,8 +99,10 @@ getAllEventsData =
      ["1;1","1;2","1;3","1;4","2;1","2;2","2;3","2;4"])
   , ("getAllEvents: norm",[(set3,["1"]),(set4,[])],
      ["1;1","1;2","1;3","1;4"])
-  , ("getAllEvents: norm 1",[(set3["1","3"]),(set4,["2","3"])],
+  , ("getAllEvents: norm 1",[(set3["1"]),(set4,["2","3"])],
      ["1;2","1;3"])
+  , ("getAllEvents: norm 2",[(set3["1","3"]),(set4,["2","3"])],
+     ["1;2","1;3","3;2","3;3"])
   ]
 
 conditionalProbData :: [(String,ProbSet Int Rational,[Int],[Int],Rational)]
