@@ -52,6 +52,7 @@ library
                        Raven.Data.BasicUnboundEntry
                        Raven.Data.Table
                        Raven.Data.Stat
+                       Raven.Data.Prob
   build-depends:       base >=4.9 && <4.10
                      , exceptions >= 0.8
                      , text >= 1.2
