@@ -4,7 +4,6 @@ module Raven.Data.Prob
   , isValidSet
   )where
 
-import Data.Ratio
 import Data.Map (Map)
 import qualified Data.Map as Map
 
