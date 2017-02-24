@@ -52,8 +52,19 @@ eventSeqProb = foldl' (\acc (pSet,subSet) -> acc * subSetProb pSet subSet) 1
 -- |Combine a list of ProbSets into a single set.
 -- Assumes valid ProbSets
 -- (to avoid the possibility of rounding errors in the predicate).
-combineProbSets :: [ProbSet Text b] -> ProbSet Text b
+combineProbSets :: (Num b) => [ProbSet Text b] -> ProbSet Text b
 combineProbSets =
+  Map.fromList .
+  foldl' (\acc val ->
+            concatMap (\e@(eName,eProb) ->
+                          if null acc
+                          then [e]
+                          else map (\(eName1,eProb1) ->
+                                      (Text.concat [eName1,";",eName],
+                                      eProb * eProb1)
+                                      ) acc
+                      ) (Map.toList val)
+            ) []
 
 -- |Gets all possible names of distinct events given an event sequence.
 -- Treats empty lists as meaning all events are possible.
@@ -61,6 +72,8 @@ combineProbSets =
 getAllEvents :: EventSeq Text b -> [Text]
 getAllEvents = foldl' combine []
   where
+    combine [] (pSet,[]) = Map.keys pSet
+    combine [] (_,subSet) = subSet
     combine acc (pSet,[]) = let ks = Map.keys pSet in
       concatMap (\val -> map (\k -> Text.concat [val,";",k]) ks) acc
     combine acc (_,subSet) =
@@ -71,5 +84,6 @@ getAllEvents = foldl' combine []
 -- Assumes a valid ProbSet
 -- (to avoid the possibility of rounding errors in the predicate).
 conditionalProb :: (Ord a,Fractional b) => ProbSet a b -> [a] -> [a] -> b
+conditionalProb _ _ [] = 0
 conditionalProb pSet e1 e2 = subSetProb pSet (intersect e1 e2) /
   subSetProb pSet e2

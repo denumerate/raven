@@ -1,10 +1,8 @@
 module Raven.Data.Stat
   ( mean
   , intMean
-  , ratioMean
   , median
   , intMedian
-  , ratioMedian
   , countInstances
   , mode
   , range
