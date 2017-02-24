@@ -54,14 +54,13 @@ eventSeqProb = foldl' (\acc (pSet,subSet) -> acc * subSetProb pSet subSet) 1
 -- (to avoid the possibility of rounding errors in the predicate).
 combineProbSets :: (Num b) => [ProbSet Text b] -> ProbSet Text b
 combineProbSets =
-  Map.fromList .
+  Map.fromList . map (\(eName,eProb) -> (Text.concat (reverse eName),eProb)) .
   foldl' (\acc val ->
-            concatMap (\e@(eName,eProb) ->
+            concatMap (\(eName,eProb) ->
                           if null acc
-                          then [e]
+                          then [([eName],eProb)]
                           else map (\(eName1,eProb1) ->
-                                      (Text.concat [eName1,";",eName],
-                                      eProb * eProb1)
+                                      (eName:";":eName1,eProb * eProb1)
                                       ) acc
                       ) (Map.toList val)
             ) []
@@ -70,14 +69,15 @@ combineProbSets =
 -- Treats empty lists as meaning all events are possible.
 -- Includes missing events (be careful).
 getAllEvents :: EventSeq Text b -> [Text]
-getAllEvents = foldl' combine []
+getAllEvents = map (Text.concat . reverse) . foldl' combine []
   where
-    combine [] (pSet,[]) = Map.keys pSet
-    combine [] (_,subSet) = subSet
+    combine :: [[Text]] -> (ProbSet Text b,[Text]) ->[[Text]]
+    combine [] (pSet,[]) = map (\val -> [val]) $ Map.keys pSet
+    combine [] (_,subSet) = map (\val -> [val]) subSet
     combine acc (pSet,[]) = let ks = Map.keys pSet in
-      concatMap (\val -> map (\k -> Text.concat [val,";",k]) ks) acc
+      concatMap (\val -> map (\k -> k:";":val) ks) acc
     combine acc (_,subSet) =
-      concatMap (\val -> map (\k -> Text.concat [val,";",k]) subSet) acc
+      concatMap (\val -> map (\k -> k:";":val) subSet) acc
 
 -- |Calculates the probability that the first event will happen if the second
 -- event has happened, both events being subsets of the ProbSet.
