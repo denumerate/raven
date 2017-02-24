@@ -23,6 +23,7 @@ allTests = TestList $ runtests2 subSetProb subSetProbData
            ++ runtests combineProbSets combineProbSetsData
            ++ runtests getAllEvents getAllEventsData
            ++ runtests3 conditionalProb conditionalProbData
+           ++ runtests3 bayes bayesData
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -117,4 +118,18 @@ conditionalProbData =
   , ("conditionalProb: norm 1",set2,[2],[1..3],1%6)
   , ("conditionalProb: norm 2",set2,[1,2],[1,2,4],3%5)
   , ("conditionalProb: norm 3",set2,[3,4],[2..4],5%6)
+  ]
+
+bayesData :: [(String,ProbSet Int Rational,[Int],[Int],Rational)]
+bayesData =
+  [ ("bayes: empty",M.empty,[],[],0)
+  , ("bayes: empty 1",set1,[],[1],0)
+  , ("bayes: empty 2",set2,[1],[],0)
+  , ("bayes: empty 3",M.empty,[],[],0)
+  , ("bayes: zero",set1,[1],[2],0)
+  , ("bayes: zero 1",set2,[2],[1,3],0)
+  , ("bayes: norm",set1,[1],[1,2],2%3)
+  , ("bayes: norm 1",set2,[2],[1..3],1%6)
+  , ("bayes: norm 2",set2,[1,2],[1,2,4],3%5)
+  , ("bayes: norm 3",set2,[3,4],[2..4],5%6)
   ]

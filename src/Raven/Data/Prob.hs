@@ -8,6 +8,7 @@ module Raven.Data.Prob
   , combineProbSets
   , getAllEvents
   , conditionalProb
+  , bayes
   )where
 
 import Data.Map (Map)
@@ -86,4 +87,13 @@ getAllEvents = map (Text.concat . reverse) . foldl' combine []
 conditionalProb :: (Ord a,Fractional b) => ProbSet a b -> [a] -> [a] -> b
 conditionalProb _ _ [] = 0
 conditionalProb pSet e1 e2 = subSetProb pSet (intersect e1 e2) /
+  subSetProb pSet e2
+
+-- |Calculates the probability that the first event will happen if the second
+-- event has happened, both events being subsets of the ProbSet, using Bayes' rule.
+-- Assumes a valid ProbSet
+-- (to avoid the possibility of rounding errors in the predicate).
+bayes :: (Ord a,Fractional b) => ProbSet a b -> [a] -> [a] -> b
+bayes _ _ [] = 0
+bayes pSet e1 e2 = (conditionalProb pSet e2 e1 * subSetProb pSet e1) /
   subSetProb pSet e2
