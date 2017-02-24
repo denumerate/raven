@@ -9,6 +9,7 @@ module Raven.Data.Prob
   , getAllEvents
   , conditionalProb
   , bayes
+  , densityFunc
   )where
 
 import Data.Map (Map)
@@ -97,3 +98,9 @@ bayes :: (Ord a,Fractional b) => ProbSet a b -> [a] -> [a] -> b
 bayes _ _ [] = 0
 bayes pSet e1 e2 = (conditionalProb pSet e2 e1 * subSetProb pSet e1) /
   subSetProb pSet e2
+
+-- |Creates a density function from a ProbSet.
+-- Assumes a valid ProbSet
+-- (to avoid the possibility of rounding errors in the predicate).
+densityFunc :: (Ord a,Num b) => ProbSet a b -> (a -> b)
+densityFunc pSet = (\val -> subSetProb pSet (filter (<= val) (Map.keys pSet)))
