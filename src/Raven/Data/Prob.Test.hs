@@ -6,7 +6,6 @@ import System.Exit
 import qualified Data.Map as M
 import Data.Ratio
 import Data.Text (Text)
-import qualified Data.Text as T
 
 import Raven.Data.Prob
 
@@ -24,6 +23,9 @@ allTests = TestList $ runtests2 subSetProb subSetProbData
            ++ runtests getAllEvents getAllEventsData
            ++ runtests3 conditionalProb conditionalProbData
            ++ runtests3 bayes bayesData
+           ++ runtests (densityFunc M.empty) densityFuncDataEmpty
+           ++ runtests (densityFunc set1) densityFuncDataSet1
+           ++ runtests (densityFunc set2) densityFuncDataSet2
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -132,4 +134,28 @@ bayesData =
   , ("bayes: norm 1",set2,[2],[1..3],1%6)
   , ("bayes: norm 2",set2,[1,2],[1,2,4],3%5)
   , ("bayes: norm 3",set2,[3,4],[2..4],5%6)
+  ]
+
+densityFuncDataEmpty :: [(String,Int,Rational)]
+densityFuncDataEmpty =
+  [ ("densityFunc: empty",3,0)
+  , ("densityFunc: empty 1",-4,0)
+  ]
+
+densityFuncDataSet1 :: [(String,Int,Rational)]
+densityFuncDataSet1 =
+  [ ("densityFunc: zero",0,0)
+  , ("densityFunc: norm",1,2%3)
+  , ("densityFunc: norm 1",2,1)
+  , ("densityFunc: norm 2",7,1)
+  ]
+
+densityFuncDataSet2 :: [(String,Int,Rational)]
+densityFuncDataSet2 =
+  [ ("densityFunc: zero 1",-3,0)
+  , ("densityFunc: norm 3",1,1%4)
+  , ("densityFunc: norm 4",2,3%8)
+  , ("densityFunc: norm 5",3,3%4)
+  , ("densityFunc: norm 6",4,1)
+  , ("densityFunc: norm 7",10,1)
   ]
