@@ -9,4 +9,6 @@ pipelines:
   default:
     - step:
         script: # Modify the commands below to build your repository.
-          - stack setup && stack test
+          - apt-get update && apt-get install -y xz-utils make
+          - stack setup
+          - stack test
