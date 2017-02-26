@@ -27,6 +27,7 @@ executable raven
                        Raven.Server.ResourceNode
                        Raven.Client
                        Raven.Client.GUI
+                       Raven.Client.Handler
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10
                      , hint

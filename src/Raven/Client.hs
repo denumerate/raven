@@ -5,9 +5,6 @@ module Raven.Client
 import Network
 import Network.Transport
 import Network.Transport.TCP
-import Control.Concurrent
-
-import qualified Data.ByteString.Char8 as B
 
 import Raven.Client.GUI
 
@@ -23,7 +20,8 @@ initClient ip portNum serverAdrs = withSocketsDo $
             Right end' -> connect end' serverAdrs ReliableOrdered defaultConnectHints >>=
               (\conn -> case conn of
                   Right conn' ->
-                    guiMain conn' end'
+                    guiMain conn' end' >>
+                    closeTransport trans'
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
                     return ())
             _ -> putStrLn "Endpoint not initialized, Client Failed" >> --move to log
