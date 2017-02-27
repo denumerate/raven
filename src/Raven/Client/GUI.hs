@@ -21,12 +21,14 @@ import qualified Data.Text as Text
 import qualified Data.ByteString.Char8 as B
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+import Data.List
 
 import Raven.Client.Handler
 
 data RName = WorkWindow
            | CName
   deriving (Eq,Ord,Show)
+
 buffersize = 25
 
 -- |Builds and runs terminal ui
@@ -34,7 +36,7 @@ guiMain :: Connection -> EndPoint -> IO ()
 guiMain conn end = let app =
                          (App
                            { appDraw = myDraw
-                           , appChooseCursor = showFirstCursor
+                           , appChooseCursor = handleCursor
                            , appHandleEvent = handler conn
                            , appStartEvent = return
                            , appAttrMap = const $ attrMap Graphics.Vty.defAttr []
@@ -81,8 +83,15 @@ ioWidget = reverse . V.foldl' (\acc (i,o) ->
                                       (txt (Text.concat
                                             [" > ",i,"\n ",o]))):acc) []
 
-controlWidget :: Text -> Widget RName
-controlWidget s = withBorderStyle unicode $ padTop Max $ txt s
+-- |Handles the cursor
+handleCursor :: (Text,Vector (Text,Text)) -> [CursorLocation n] ->
+  Maybe (CursorLocation n)
+handleCursor _ = foldl' choose Nothing
+  where
+    choose Nothing val = Just val
+    choose (Just acc@(CursorLocation (Location (_,accY)) _))
+      val@(CursorLocation (Location (_,valY)) _) =
+      if accY > valY then Just acc else Just val
 
 -- |Listen for and handle events from the endpoint
 listenAtEnd :: BChan [Text] -> EndPoint -> IO ()
