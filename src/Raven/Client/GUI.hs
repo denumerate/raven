@@ -32,6 +32,7 @@ data RName = WorkWindow
 buffersize = 25
 
 -- |Builds and runs terminal ui
+-- State is: Connection info,Vector of lines,history int
 guiMain :: Connection -> EndPoint -> IO ()
 guiMain conn end = let app =
                          (App
@@ -40,17 +41,17 @@ guiMain conn end = let app =
                            , appHandleEvent = handler conn
                            , appStartEvent = return
                            , appAttrMap = const $ attrMap Graphics.Vty.defAttr []
-                           } :: App (Text,Vector (Text,Text,Int)) [Text] RName)
+                           } :: App (Text,Vector (Text,Text,Int),Int) [Text] RName)
                    in newBChan buffersize >>=
                       (\chan ->
                          forkIO (listenAtEnd chan end) >>
                          customMain (mkVty defaultConfig) (Just chan) app
-                         ((Text.pack . show . address) end,V.fromList [("","",3)])) >>
+                         ((Text.pack . show . address) end,V.fromList [("","",3)],0)) >>
                       return ()
 
 -- |All widgets
-myDraw :: (Text,Vector (Text,Text,Int)) -> [Widget RName]
-myDraw (c,ios) = [ vBox [ hBorder
+myDraw :: (Text,Vector (Text,Text,Int),Int) -> [Widget RName]
+myDraw (c,ios,_) = [ vBox [ hBorder
                         , connStatus c
                         , hBorder
                         , workWidget ios
@@ -84,7 +85,7 @@ ioWidget = reverse . V.foldl' (\acc (i,o,c) ->
                                             [" > ",i,"\n ",o]))):acc) []
 
 -- |Handles the cursor
-handleCursor :: (Text,Vector (Text,Text,Int)) -> [CursorLocation n] ->
+handleCursor :: (Text,Vector (Text,Text,Int),Int) -> [CursorLocation n] ->
   Maybe (CursorLocation n)
 handleCursor _ = foldl' choose Nothing
   where
