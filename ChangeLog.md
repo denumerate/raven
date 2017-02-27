@@ -1,6 +1,12 @@
 # Revision history for raven
 
 
+## 0.1.6 -- 17-02-27
+
+* A simple text-based client has been build, and command line options
+have been added to Main.
+
+
 ## 0.1.5 -- 17-02-22
 
 * ServerNode pulled out of Server.
