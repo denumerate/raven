@@ -32,10 +32,27 @@ handleKey _ (c,ios) (KChar chr) [] = let (i,o,cur) = V.last ios in
 handleKey _ s@(c,ios) (KDel) [] = let (i,o,cur) = V.last ios in
   if Text.null i
   then continue s
-  else continue (c,V.snoc (V.init ios) (Text.init i,o,cur-1))
+  else continue (c,V.snoc (V.init ios) (delete (cur-4) i,o,cur-1))
 handleKey c s (KBS) [] = handleKey c s KDel []
 handleKey conn s (KEnter) [] = handleLine conn s
+handleKey _ s@(c,ios) (KLeft) [] =
+  let (i,o,cur) = V.last ios in
+    if cur > 3
+    then continue (c,V.snoc (V.init ios) (i,o,cur-1))
+    else continue s
+handleKey _ s@(c,ios) (KRight) [] =
+  let (i,o,cur) = V.last ios in
+    if cur < 3 + Text.length i
+    then continue (c,V.snoc (V.init ios) (i,o,cur+1))
+    else continue s
 handleKey _ s _ _ = continue s
+
+-- |Delete character at index i
+delete :: Int -> Text -> Text
+delete i t = Text.concat
+  [ Text.take i t
+  , Text.drop (i+1) t
+  ]
 
 handleLine :: Connection -> (Text,Vector (Text,Text,Int)) ->
   EventM n (Next (Text,Vector (Text,Text,Int)))
