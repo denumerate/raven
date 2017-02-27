@@ -34,18 +34,36 @@ handleKey _ s@(c,ios) (KDel) [] = let (i,o) = V.last ios in
   then continue s
   else continue (c,V.snoc (V.init ios) (Text.init i,o))
 handleKey c s (KBS) [] = handleKey c s KDel []
-handleKey conn s@(c,ios) (KEnter) [] = let info = fst $ V.last ios in
-  if Text.null info
-  then continue s
-  else suspendAndResume
-       (forkIO (send conn
-                [ B.pack $ show $ length ios - 1
-                , " "
-                , B.pack $ Text.unpack info --error possible
-                ] >>
-               return ()) >>
-        return (c,V.snoc ios ("","")))
+handleKey conn s (KEnter) [] = handleLine conn s
 handleKey _ s _ _ = continue s
+
+handleLine :: Connection -> (Text,Vector (Text,Text)) ->
+  EventM n (Next (Text,Vector (Text,Text)))
+handleLine conn s@(c,ios) = let info = fst $ V.last ios in
+  if Text.null info
+  then continue (c,V.snoc ios ("",""))
+  else if Text.head info == ':'
+       then handleCommand conn s
+       else suspendAndResume
+            (forkIO (send conn
+                     [ B.pack $ show $ length ios - 1
+                     , " "
+                     , B.pack $ Text.unpack info --error possible
+                     ] >>
+                     return ()) >>
+             return (c,V.snoc ios ("","")))
+
+handleCommand ::  Connection -> (Text,Vector (Text,Text)) ->
+  EventM n (Next (Text,Vector (Text,Text)))
+handleCommand conn s@(c,ios) = let cmd = fst $ V.last ios in
+  case cmd of
+    ":quit" -> halt s
+    ":kill" -> suspendAndResume
+               (forkIO (send conn
+                         [":kill"] >>
+                         return ()) >>
+                return (c,V.snoc ios ("","")))
+    _ -> continue (c,V.snoc ios ("",""))
 
 -- |Handle app events
 handleApp :: (Text,Vector (Text,Text)) -> [Text] ->

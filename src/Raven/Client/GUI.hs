@@ -48,16 +48,16 @@ guiMain conn end = let app =
 
 -- |All widgets
 myDraw :: (Text,Vector (Text,Text)) -> [Widget RName]
-myDraw s = [ vBox [ hBorder
-                  , connStatus s
-                  , hBorder
-                  , workWidget s
-                  ]
-           ]
+myDraw (c,ios) = [ vBox [ hBorder
+                        , connStatus c
+                        , hBorder
+                        , workWidget ios
+                        ]
+                 ]
 
 -- |Connection Status Widget
-connStatus :: (Text,Vector (Text,Text)) -> Widget n
-connStatus (s,_) = if Text.isPrefixOf "Connection Error:" s
+connStatus :: Text -> Widget n
+connStatus s = if Text.isPrefixOf "Connection Error:" s
                then withBorderStyle unicode $
                     padAll 1 $ txt s
                else withBorderStyle unicode $
@@ -65,8 +65,8 @@ connStatus (s,_) = if Text.isPrefixOf "Connection Error:" s
                     ["Connection: ",s]
 
 -- |Creates a work Widget
-workWidget :: (Text,Vector (Text,Text)) -> Widget RName
-workWidget (_,dis) = viewport WorkWindow Vertical $ vBox $ ioWidget dis
+workWidget :: Vector (Text,Text) -> Widget RName
+workWidget dis = viewport WorkWindow Vertical $ vBox $ ioWidget dis
 
 -- |Creates a widget for I/O
 ioWidget :: Vector (Text,Text) -> [Widget RName]
@@ -80,6 +80,9 @@ ioWidget = reverse . V.foldl' (\acc (i,o) ->
                                      (Location (3,0))
                                       (txt (Text.concat
                                             [" > ",i,"\n ",o]))):acc) []
+
+controlWidget :: Text -> Widget RName
+controlWidget s = withBorderStyle unicode $ padTop Max $ txt s
 
 -- |Listen for and handle events from the endpoint
 listenAtEnd :: BChan [Text] -> EndPoint -> IO ()
