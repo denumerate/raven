@@ -38,8 +38,8 @@ newConnNode trans server conn = newEmptyMVar >>=
 
 -- |Takes the result of the servers work and sends it back to the client
 sendResult :: Connection -> ProcessedMsg -> Process ()
-sendResult conn (ProcessedMsg msg) =
-  liftIO $ Network.Transport.send conn [B.pack msg] >> --error possible here
+sendResult conn (ProcessedMsg n msg) =
+  liftIO $ Network.Transport.send conn [n," ",B.pack msg] >> --error possible here
   return ()
 
 -- |Handles the data send by a received event
@@ -47,9 +47,9 @@ sendResult conn (ProcessedMsg msg) =
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
 handleReceived pid [":kill"] (connNode,_) = runProcess connNode
   (Control.Distributed.Process.send pid KillMsg)
-handleReceived pid [msg] (connNode,self) = readMVar self >>=
+handleReceived pid [n,msg] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
-    (Control.Distributed.Process.send pid (self',REPLMsg (B.unpack msg))))
+    (Control.Distributed.Process.send pid (self',REPLMsg n (B.unpack msg))))
 handleReceived pid msg (connNode,_) = runProcess connNode
   (buildLogMsg
    ("Received, not recognized message from outside connection: " ++ show msg) >>=

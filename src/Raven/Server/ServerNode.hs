@@ -10,6 +10,7 @@ import Control.Monad (forever)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.ByteString.Char8 as B
 
 import Raven.Server.NodeMsgs
 import Raven.Server.ConnNode
@@ -36,8 +37,8 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                 , match (handleKill trans end replNode resNode)
                                 , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                 ])) >>=
-            (\lpid -> (spawnLocal . liftIO . listenAtEnd trans end node Map.empty) lpid >>
-                      liftIO (putMVar serverpid lpid)) >>
+            (\lpid -> liftIO (putMVar serverpid lpid) >>
+                      (liftIO . listenAtEnd trans end node Map.empty) lpid) >>
            return ())))))
 
 -- |Listen for and handle events from the endpoint.
@@ -60,10 +61,12 @@ listenAtEnd trans end serverN conns pid = receive end >>=
                                ++ ". " ++ show err) >>=
                              Control.Distributed.Process.send pid))) >>
                listenAtEnd trans end serverN (Map.insert cid cNode conns) pid)
-      Received cid info -> forkIO
+      Received cid [info] -> forkIO
              (case Map.lookup cid conns of
-                 Just conn -> readMVar conn >>=
-                              handleReceived pid info
+                 Just conn -> let wds = B.words info in
+                                readMVar conn >>=
+                                handleReceived pid
+                                [head wds,B.unwords (tail wds)]
                  Nothing -> runProcess serverN
                             (buildLogMsg "Connection not found in Map" >>=
                              Control.Distributed.Process.send pid)) >>

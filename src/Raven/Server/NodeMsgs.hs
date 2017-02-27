@@ -19,11 +19,12 @@ import Data.Binary
 import Data.Typeable
 import Data.Time.Clock
 import GHC.Generics
+import Data.ByteString.Char8 (ByteString)
 
-data REPLMsg = REPLMsg String
+data REPLMsg = REPLMsg ByteString String
   deriving (Generic,Binary,Typeable)
 
-data ProcessedMsg = ProcessedMsg String
+data ProcessedMsg = ProcessedMsg ByteString String
   deriving (Generic,Binary,Typeable)
 
 data KillMsg = KillMsg
