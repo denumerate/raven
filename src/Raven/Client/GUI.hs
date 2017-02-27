@@ -71,7 +71,7 @@ workWidget (_,dis) = viewport WorkWindow Vertical $ vBox $ ioWidget dis
 -- |Creates a widget for I/O
 ioWidget :: Vector (Text,Text) -> [Widget RName]
 ioWidget = reverse . V.foldl' (\acc (i,o) ->
-                               if False
+                               if Text.null o
                                then (Brick.Widgets.Core.showCursor CName
                                      (Location (3,0))
                                       (txt (Text.concat

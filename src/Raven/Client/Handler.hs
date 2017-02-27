@@ -36,7 +36,7 @@ handleKey conn s@(c,ios) (KEnter) [] = let info = fst $ V.last ios in
   then continue s
   else suspendAndResume
        (forkIO (send conn
-                [ B.pack $ show $ length ios
+                [ B.pack $ show $ length ios - 1
                 , " "
                 , B.pack $ Text.unpack info --error possible
                 ] >>
