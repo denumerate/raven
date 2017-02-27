@@ -23,9 +23,9 @@ allTests = TestList $ runtests2 subSetProb subSetProbData
            ++ runtests getAllEvents getAllEventsData
            ++ runtests3 conditionalProb conditionalProbData
            ++ runtests3 bayes bayesData
-           ++ runtests (densityFunc M.empty) densityFuncDataEmpty
-           ++ runtests (densityFunc set1) densityFuncDataSet1
-           ++ runtests (densityFunc set2) densityFuncDataSet2
+           ++ runtests (distributionFunc M.empty) distributionFuncDataEmpty
+           ++ runtests (distributionFunc set1) distributionFuncDataSet1
+           ++ runtests (distributionFunc set2) distributionFuncDataSet2
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -136,26 +136,26 @@ bayesData =
   , ("bayes: norm 3",set2,[3,4],[2..4],5%6)
   ]
 
-densityFuncDataEmpty :: [(String,Int,Rational)]
-densityFuncDataEmpty =
-  [ ("densityFunc: empty",3,0)
-  , ("densityFunc: empty 1",-4,0)
+distributionFuncDataEmpty :: [(String,Int,Rational)]
+distributionFuncDataEmpty =
+  [ ("distributionFunc: empty",3,0)
+  , ("distributionFunc: empty 1",-4,0)
   ]
 
-densityFuncDataSet1 :: [(String,Int,Rational)]
-densityFuncDataSet1 =
-  [ ("densityFunc: zero",0,0)
-  , ("densityFunc: norm",1,2%3)
-  , ("densityFunc: norm 1",2,1)
-  , ("densityFunc: norm 2",7,1)
+distributionFuncDataSet1 :: [(String,Int,Rational)]
+distributionFuncDataSet1 =
+  [ ("distributionFunc: zero",0,0)
+  , ("distributionFunc: norm",1,2%3)
+  , ("distributionFunc: norm 1",2,1)
+  , ("distributionFunc: norm 2",7,1)
   ]
 
-densityFuncDataSet2 :: [(String,Int,Rational)]
-densityFuncDataSet2 =
-  [ ("densityFunc: zero 1",-3,0)
-  , ("densityFunc: norm 3",1,1%4)
-  , ("densityFunc: norm 4",2,3%8)
-  , ("densityFunc: norm 5",3,3%4)
-  , ("densityFunc: norm 6",4,1)
-  , ("densityFunc: norm 7",10,1)
+distributionFuncDataSet2 :: [(String,Int,Rational)]
+distributionFuncDataSet2 =
+  [ ("distributionFunc: zero 1",-3,0)
+  , ("distributionFunc: norm 3",1,1%4)
+  , ("distributionFunc: norm 4",2,3%8)
+  , ("distributionFunc: norm 5",3,3%4)
+  , ("distributionFunc: norm 6",4,1)
+  , ("distributionFunc: norm 7",10,1)
   ]

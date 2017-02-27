@@ -9,7 +9,8 @@ module Raven.Data.Prob
   , getAllEvents
   , conditionalProb
   , bayes
-  , densityFunc
+  , distributionFunc
+  , probFromFunc
   )where
 
 import Data.Map (Map)
@@ -99,8 +100,15 @@ bayes _ _ [] = 0
 bayes pSet e1 e2 = (conditionalProb pSet e2 e1 * subSetProb pSet e1) /
   subSetProb pSet e2
 
--- |Creates a density function from a ProbSet.
+-- |Creates a distribution function from a ProbSet.
 -- Assumes a valid ProbSet
 -- (to avoid the possibility of rounding errors in the predicate).
-densityFunc :: (Ord a,Num b) => ProbSet a b -> (a -> b)
-densityFunc pSet = (\val -> subSetProb pSet (filter (<= val) (Map.keys pSet)))
+distributionFunc :: (Ord a,Num b) => ProbSet a b -> (a -> b)
+distributionFunc pSet = (\val -> subSetProb pSet (filter (<= val) (Map.keys pSet)))
+
+-- |Takes a distribution function and two points, finds the probability that any event
+-- That an event between and including the larger point will happen.
+probFromFunc :: (Ord a,Num b) => (a -> b) -> a -> a -> b
+probFromFunc f p1 p2
+  |p1 > p2 = probFromFunc f p2 p1
+  |otherwise = f p2 - f p1

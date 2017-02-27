@@ -16,8 +16,14 @@ main = do
     else exitSuccess
 
 allTests :: Test
-allTests = TestList $ runtests (uniform M.empty) uniformDataEmpty
-           ++ runtests (uniform set1) uniformDataSet1
+allTests = TestList $ runtests (uniformDistribution M.empty) uniformDistributionDataEmpty
+  ++ runtests (uniformDistribution set1) uniformDistributionDataSet1
+  ++ runtests (intUniformDistribution M.empty) intUniformDistributionDataEmpty
+  ++ runtests (intUniformDistribution set1') intUniformDistributionDataSet1
+  ++ runtests (uniformDensity M.empty) uniformDensityDataEmtpy
+  ++ runtests (uniformDensity set1) uniformDensityDataSet1
+  ++ runtests (intUniformDensity M.empty) intUniformDensityDataEmtpy
+  ++ runtests (intUniformDensity set1') intUniformDensityDataSet1
 
 --run tests with 1 input
 runtests :: (Eq b,Show b) => (a -> b) -> [(String,a,b)] -> [Test]
@@ -29,17 +35,63 @@ createtest f = map (\(s,x,y) -> (s,TestCase $ y @=? f x))
 
 --Test Values:
 set1 = M.fromList $ zip [0..4] $ take 5 $ repeat $ 1%5
+set1' = M.fromList $ zip [0..4] $ take 5 $ repeat $ 1%5
 
-uniformDataEmpty :: [(String,Rational,Rational)]
-uniformDataEmpty =
-  [ ("uniform: empty",8,0)
-  , ("uniform: empty 1",-4,0)
+uniformDistributionDataEmpty :: [(String,Rational,Rational)]
+uniformDistributionDataEmpty =
+  [ ("uniformDistribution: empty", 1%5, 0)
+  , ("uniformDistribution: empty 1", -4%7, 0)
   ]
 
-uniformDataSet1 :: [(String,Rational,Rational)]
-uniformDataSet1 =
-  [ ("uniform: zero",-4,0)
-  , ("uniform: zero 1",5%4,0)
-  , ("uniform: norm",2%3,1%5)
-  , ("uniform: norm",4%5,1%5)
+uniformDistributionDataSet1 :: [(String,Rational,Rational)]
+uniformDistributionDataSet1 =
+  [ ("uniformDistribution: zero",0,0)
+  , ("uniformDistribution: one",4,1)
+  , ("uniformDistribution: norm",1%2,1%8)
+  , ("uniformDistribution: norm 1",3,3%4)
+  , ("uniformDistribution: norm 2",7%3,7%12)
+  ]
+
+intUniformDistributionDataEmpty :: [(String,Int,Ratio Int)]
+intUniformDistributionDataEmpty =
+  [ ("intUniformDistribution: empty", 1, 0)
+  , ("intUniformDistribution: empty 1", -4, 0)
+  ]
+
+
+intUniformDistributionDataSet1 :: [(String,Int,Ratio Int)]
+intUniformDistributionDataSet1 =
+  [ ("intUniformDistribution: zero",0,0)
+  , ("intUniformDistribution: one",4,1)
+  , ("intUniformDistribution: norm",1,1%4)
+  , ("intUniformDistribution: norm 1",2,1%2)
+  , ("intUniformDistribution: norm 2",3,3%4)
+  ]
+
+uniformDensityDataEmtpy :: [(String,Rational,Rational)]
+uniformDensityDataEmtpy =
+  [ ("uniformDensity: empty", 6%11, 0)
+  , ("uniformDensity: empty 1", -8%3,0)
+  ]
+
+uniformDensityDataSet1 :: [(String,Rational,Rational)]
+uniformDensityDataSet1 =
+  [ ("uniformDensity: zero",-1%3,0)
+  , ("uniformDensity: zero 1",9%2,0)
+  , ("uniformDensity: norm",3%4,1%4)
+  , ("uniformDensity: norm 1",7%3,1%4)
+  ]
+
+intUniformDensityDataEmtpy :: [(String,Int,Ratio Int)]
+intUniformDensityDataEmtpy =
+  [ ("intUniformDensity: empty", 6, 0)
+  , ("intUniformDensity: empty 1", -8,0)
+  ]
+
+intUniformDensityDataSet1 :: [(String,Int,Ratio Int)]
+intUniformDensityDataSet1 =
+  [ ("intUniformDensity: zero",-1,0)
+  , ("intUniformDensity: zero 1",5,0)
+  , ("intUniformDensity: norm",3,1%4)
+  , ("intUniformDensity: norm 1",2,1%4)
   ]
