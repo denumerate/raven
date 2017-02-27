@@ -89,7 +89,7 @@ handleLine conn s@(c,ios,_) = let (info,_,_) = V.last ios in
                      return ()) >>
              return (c,V.snoc ios ("","",3),V.length ios))
 
-handleCommand ::  Connection -> (Text,Vector (Text,Text,Int),Int) ->
+handleCommand :: Connection -> (Text,Vector (Text,Text,Int),Int) ->
   EventM n (Next (Text,Vector (Text,Text,Int),Int))
 handleCommand conn s@(c,ios,_) = let (cmd,_,_) = V.last ios in
   case cmd of

@@ -33,21 +33,22 @@ buffersize = 25
 
 -- |Builds and runs terminal ui
 -- State is: Connection info,Vector of lines,history int
-guiMain :: Connection -> EndPoint -> IO ()
-guiMain conn end = let app =
-                         (App
-                           { appDraw = myDraw
-                           , appChooseCursor = handleCursor
-                           , appHandleEvent = handler conn
-                           , appStartEvent = return
-                           , appAttrMap = const $ attrMap Graphics.Vty.defAttr []
-                           } :: App (Text,Vector (Text,Text,Int),Int) [Text] RName)
-                   in newBChan buffersize >>=
-                      (\chan ->
-                         forkIO (listenAtEnd chan end) >>
-                         customMain (mkVty defaultConfig) (Just chan) app
-                         ((Text.pack . show . address) end,V.fromList [("","",3)],0)) >>
-                      return ()
+guiMain :: Connection -> EndPoint -> EndPointAddress -> IO ()
+guiMain conn end server =
+  let app =
+        (App
+          { appDraw = myDraw
+          , appChooseCursor = handleCursor
+          , appHandleEvent = handler conn
+          , appStartEvent = return
+          , appAttrMap = const $ attrMap Graphics.Vty.defAttr []
+          } :: App (Text,Vector (Text,Text,Int),Int) [Text] RName)
+  in newBChan buffersize >>=
+     (\chan ->
+         forkIO (listenAtEnd chan end) >>
+         customMain (mkVty defaultConfig) (Just chan) app
+         ((Text.pack . show) server,V.fromList [("","",3)],0)) >>
+     return ()
 
 -- |All widgets
 myDraw :: (Text,Vector (Text,Text,Int),Int) -> [Widget RName]

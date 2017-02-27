@@ -20,7 +20,7 @@ initClient ip portNum serverAdrs = withSocketsDo $
             Right end' -> connect end' serverAdrs ReliableOrdered defaultConnectHints >>=
               (\conn -> case conn of
                   Right conn' ->
-                    guiMain conn' end' >>
+                    guiMain conn' end' serverAdrs >>
                     closeTransport trans'
                   _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
                     return ())

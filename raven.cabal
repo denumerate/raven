@@ -2,7 +2,7 @@
 --  see http://haskell.org/cabal/users-guide/
 
 name:                raven
-version:             0.1.5
+version:             0.1.6
 synopsis:            N/A
 -- description:         
 homepage:            N/A
@@ -46,6 +46,7 @@ executable raven
                      , vty >= 5.11
                      , text >= 1.2
                      , vector >= 0.11
+                     , network-info >= 0.2
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -threaded
