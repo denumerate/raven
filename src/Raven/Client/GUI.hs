@@ -40,16 +40,16 @@ guiMain conn end = let app =
                            , appHandleEvent = handler conn
                            , appStartEvent = return
                            , appAttrMap = const $ attrMap Graphics.Vty.defAttr []
-                           } :: App (Text,Vector (Text,Text)) [Text] RName)
+                           } :: App (Text,Vector (Text,Text,Int)) [Text] RName)
                    in newBChan buffersize >>=
                       (\chan ->
                          forkIO (listenAtEnd chan end) >>
                          customMain (mkVty defaultConfig) (Just chan) app
-                         ((Text.pack . show . address) end,V.fromList [("","")])) >>
+                         ((Text.pack . show . address) end,V.fromList [("","",3)])) >>
                       return ()
 
 -- |All widgets
-myDraw :: (Text,Vector (Text,Text)) -> [Widget RName]
+myDraw :: (Text,Vector (Text,Text,Int)) -> [Widget RName]
 myDraw (c,ios) = [ vBox [ hBorder
                         , connStatus c
                         , hBorder
@@ -67,24 +67,24 @@ connStatus s = if Text.isPrefixOf "Connection Error:" s
                     ["Connection: ",s]
 
 -- |Creates a work Widget
-workWidget :: Vector (Text,Text) -> Widget RName
+workWidget :: Vector (Text,Text,Int) -> Widget RName
 workWidget dis = viewport WorkWindow Vertical $ vBox $ ioWidget dis
 
 -- |Creates a widget for I/O
-ioWidget :: Vector (Text,Text) -> [Widget RName]
-ioWidget = reverse . V.foldl' (\acc (i,o) ->
+ioWidget :: Vector (Text,Text,Int) -> [Widget RName]
+ioWidget = reverse . V.foldl' (\acc (i,o,c) ->
                                if Text.null o
                                then (Brick.Widgets.Core.showCursor CName
-                                     (Location (3,0))
+                                     (Location (c,0))
                                       (txt (Text.concat
                                             [" > ",i]))):acc
                                else (Brick.Widgets.Core.showCursor CName
-                                     (Location (3,0))
+                                     (Location (c,0))
                                       (txt (Text.concat
                                             [" > ",i,"\n ",o]))):acc) []
 
 -- |Handles the cursor
-handleCursor :: (Text,Vector (Text,Text)) -> [CursorLocation n] ->
+handleCursor :: (Text,Vector (Text,Text,Int)) -> [CursorLocation n] ->
   Maybe (CursorLocation n)
 handleCursor _ = foldl' choose Nothing
   where
