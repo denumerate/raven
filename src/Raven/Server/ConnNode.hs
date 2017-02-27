@@ -46,7 +46,8 @@ sendResult conn (ProcessedMsg n msg) =
 -- needs the servers process id
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
 handleReceived pid [":kill"] (connNode,_) = runProcess connNode
-  (Control.Distributed.Process.send pid KillMsg)
+  (Control.Distributed.Process.send pid KillMsg) >>
+  putStrLn "ks"
 handleReceived pid [n,msg] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send pid (self',REPLMsg n (B.unpack msg))))
