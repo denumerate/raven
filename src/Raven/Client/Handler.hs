@@ -29,8 +29,11 @@ handleKey :: Connection -> (Text,Vector (Text,Text)) -> Key -> [Modifier] ->
   EventM n (Next (Text,Vector (Text,Text)))
 handleKey _ (c,ios) (KChar chr) [] = let (i,o) = V.last ios in
   continue (c,V.snoc (V.init ios) (Text.snoc i chr,o))
-handleKey _ (c,ios) (KDel) [] = let (i,o) = V.last ios in
-  continue (c,V.snoc (V.init ios) (Text.init i,o))
+handleKey _ s@(c,ios) (KDel) [] = let (i,o) = V.last ios in
+  if Text.null i
+  then continue s
+  else continue (c,V.snoc (V.init ios) (Text.init i,o))
+handleKey c s (KBS) [] = handleKey c s KDel []
 handleKey conn s@(c,ios) (KEnter) [] = let info = fst $ V.last ios in
   if Text.null info
   then continue s
