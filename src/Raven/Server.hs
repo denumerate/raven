@@ -9,8 +9,6 @@ import Network.Transport.TCP
 import Raven.Server.ServerNode
 
 -- |Start the server and listen for connections at the supplied ip:port number.
--- Returns the address of the server endpoint (if successful)
--- All async
 initServer :: String -> String -> IO ()
 initServer ip portNum = withSocketsDo $
   createTransport ip portNum defaultTCPParameters >>=
