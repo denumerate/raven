@@ -10,7 +10,6 @@ import Raven.Client.GUI
 
 -- |Start the client and listen for connections at the supplied ip:port number
 -- then connects to the server
--- Returns the address of the client (if successful)
 initClient :: String -> String -> EndPointAddress -> IO ()
 initClient ip portNum serverAdrs = withSocketsDo $
   createTransport ip portNum defaultTCPParameters >>=
