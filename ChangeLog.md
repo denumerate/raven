@@ -1,6 +1,12 @@
 # Revision history for raven
 
 
+## 0.1.7 -- 17-02-28
+
+* Basic and conditional probability added, the first distribution functions
+written.
+
+
 ## 0.1.6 -- 17-02-27
 
 * A simple text-based client has been build, and command line options
