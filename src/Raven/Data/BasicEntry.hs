@@ -69,8 +69,8 @@ instance Entry BasicEntry where
                      ]
     |length (getEntries vs :: [Ratio Int]) /= 0 =
        let vs' = (getEntries vs :: [Ratio Int]) in
-         Text.concat [ "Mean: ", (Text.pack . show . ratioMean) vs'
-                     , "\nMedian: ", (Text.pack . show . ratioMedian) vs'
+         Text.concat [ "Mean: ", (Text.pack . show . mean) vs'
+                     , "\nMedian: ", (Text.pack . show . median) vs'
                      , "\nMode: ", (Text.pack . show . mode) vs'
                      , "\nMinimum: ", (Text.pack . show . minimum) vs'
                      , "\nMaximum: ", (Text.pack . show . maximum) vs'

@@ -61,6 +61,8 @@ library
                        Raven.Data.BasicUnboundEntry
                        Raven.Data.Table
                        Raven.Data.Stat
+                       Raven.Data.Prob
+                       Raven.Data.Prob.DistributionFuncs
   build-depends:       base >=4.9 && <4.10
                      , exceptions >= 0.8
                      , text >= 1.2
@@ -73,7 +75,7 @@ Test-suite test-entry
   type:                exitcode-stdio-1.0
   main-is:             Entry.Test.hs
   build-depends:       base >= 4.9
-                     , HUnit
+                     , HUnit >= 1.3
                      , vector >= 0.11
                      , raven
   hs-source-dirs:      src/Raven/Data
@@ -83,7 +85,7 @@ Test-suite test-table
   type:                exitcode-stdio-1.0
   main-is:             Table.Test.hs
   build-depends:       base >= 4.9
-                     , HUnit
+                     , HUnit >= 1.3
                      , vector >= 0.11
                      , raven
                      , text >= 1.2
@@ -94,8 +96,29 @@ Test-suite test-stat
   type:                exitcode-stdio-1.0
   main-is:             Stat.Test.hs
   build-depends:       base >= 4.9
-                     , HUnit
+                     , HUnit >= 1.3
                      , raven
                      , containers >= 0.5
   hs-source-dirs:      src/Raven/Data
+  default-language:    Haskell2010
+
+Test-suite test-prob
+  type:                exitcode-stdio-1.0
+  main-is:             Prob.Test.hs
+  build-depends:       base >= 4.9
+                     , HUnit >= 1.3
+                     , raven
+                     , containers >= 0.5
+                     , text >= 1.2
+  hs-source-dirs:      src/Raven/Data
+  default-language:    Haskell2010
+
+Test-suite test-dist
+  type:                exitcode-stdio-1.0
+  main-is:             DistributionFuncs.Test.hs
+  build-depends:       base >= 4.9
+                     , HUnit >= 1.3
+                     , raven
+                     , containers >= 0.5
+  hs-source-dirs:      src/Raven/Data/Prob
   default-language:    Haskell2010

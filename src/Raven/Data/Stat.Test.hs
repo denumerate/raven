@@ -19,10 +19,8 @@ main = do
 allTests :: Test
 allTests = TestList $ runtests mean meanData
            ++ runtests intMean intMeanData
-           ++ runtests ratioMean ratioMeanData
            ++ runtests median medianData
            ++ runtests intMedian intMedianData
-           ++ runtests ratioMedian ratioMedianData
            ++ runtests countInstances countInstancesData
            ++ runtests mode modeData
            ++ runtests variance varianceData
