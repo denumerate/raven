@@ -49,10 +49,10 @@ sendResult conn (ProcessedMsg n msg) =
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
 handleReceived pid [":kill",""] (connNode,_) = runProcess connNode
   (Control.Distributed.Process.send pid KillMsg)
-handleReceived pid [":logon",name,pass] (connNode,self) = readMVar self >>=
+handleReceived pid [n,":logon",name,pass] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send pid
-     (self',LoginMsg (Text.pack (B.unpack name))
+     (self',LoginMsg n (Text.pack (B.unpack name))
        (Text.pack (show (hash pass :: Digest SHA3_512))))))
 handleReceived pid [n,msg] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode

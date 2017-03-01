@@ -64,4 +64,6 @@ handleLogin server p (cPID,LoginMsg n name pass) = liftIO (checkUser p name pass
       (Just (Left info)) ->
         Control.Distributed.Process.send server (cPID,LoginSucMsg info) >>
         Control.Distributed.Process.send cPID (ProcessedMsg n "Login Successful")
-      (Just (Right err)) -> buildLogMsg err >>=)
+      (Just (Right err)) -> buildLogMsg err >>=
+        Control.Distributed.Process.send server
+      _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed"))
