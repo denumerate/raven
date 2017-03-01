@@ -11,9 +11,11 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
 import Control.Monad (forever)
+import Crypto.Hash
 
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
+import qualified Data.Text as Text
 
 import Raven.Server.NodeMsgs
 
@@ -47,6 +49,11 @@ sendResult conn (ProcessedMsg n msg) =
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
 handleReceived pid [":kill",""] (connNode,_) = runProcess connNode
   (Control.Distributed.Process.send pid KillMsg)
+handleReceived pid [":logon",name,pass] (connNode,self) = readMVar self >>=
+  (\self' -> runProcess connNode
+    (Control.Distributed.Process.send pid
+     (self',LoginMsg (Text.pack (B.unpack name))
+       (Text.pack (show (hash pass :: Digest SHA3_512))))))
 handleReceived pid [n,msg] (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send pid (self',REPLMsg n (B.unpack msg))))

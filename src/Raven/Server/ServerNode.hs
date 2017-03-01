@@ -34,6 +34,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
             spawnLocal (forever (receiveWait
                                 [ match (handleREPL replNode)
                                 , match (handleLog resNode)
+                                , match (handleLogin resNode)
                                 , match (handleKill trans end replNode resNode)
                                 , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                 ])) >>=
@@ -111,4 +112,8 @@ handleKill trans end replNode resNode _ =
 -- |Handle a LogMsg
 handleLog :: ResourceNode -> LogMsg -> Process ()
 handleLog rNode msg = liftIO (readMVar rNode) >>=
+  (`Control.Distributed.Process.send` msg)
+
+handleLogin :: ResourceNode -> (ProcessId,LoginMsg) -> Process ()
+handleLogin rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)

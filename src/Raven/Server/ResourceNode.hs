@@ -9,11 +9,13 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
 import Control.Monad(forever)
+import qualified Database.MongoDB as DB
 
 import System.IO
 import System.Directory
 
 import Raven.Server.NodeMsgs
+import Raven.DataBase
 
 -- |Stores the ProcessId of the listen process
 type ResourceNode = MVar ProcessId
@@ -27,16 +29,18 @@ newResourceNode trans =
   createDirectoryIfMissing False ".raven" >>
   openFile ".raven/log" AppendMode >>=
   (\logH -> hSetBuffering logH (BlockBuffering Nothing) >>
-    newLocalNode trans initRemoteTable >>=
-    (\node -> newEmptyMVar >>=
-      (\pid -> runProcess node
-        (spawnLocal (forever (receiveWait
-                               [ match (handleLog logH)
-                               , match (handleKill logH)
-                               , matchUnknown (catchAllMsgs' pid "ResourceNode")
-                               ])) >>=
-          liftIO . putMVar pid) >>
-        return pid)))
+  DB.connect (DB.host "127.0.0.1") >>=
+    (\db -> ensureUsers db >>
+      newLocalNode trans initRemoteTable >>=
+      (\node -> newEmptyMVar >>=
+        (\pid -> runProcess node
+          (spawnLocal (forever (receiveWait
+                                [ match (handleLog logH)
+                                , match (handleKill logH)
+                                , matchUnknown (catchAllMsgs' pid "ResourceNode")
+                                ])) >>=
+           liftIO . putMVar pid) >>
+          return pid))))
 
 -- |Tells the listening process on a resourceNode to exit
 cleanResourceNode :: ResourceNode -> Process ()
@@ -53,3 +57,11 @@ handleKill :: Handle -> KillMsg -> Process ()
 handleKill h _ =
   liftIO (hClose h) >>
   getSelfPid >>= (`exit` "Clean")
+
+handleLogin :: ProcessId -> DB.Pipe -> (ProcessId,LoginMsg) -> Process ()
+handleLogin server p (cPID,LoginMsg n name pass) = liftIO (checkUser p name pass) >>=
+  (\ret -> case ret of
+      (Just (Left info)) ->
+        Control.Distributed.Process.send server (cPID,LoginSucMsg info) >>
+        Control.Distributed.Process.send cPID (ProcessedMsg n "Login Successful")
+      (Just (Right err)) -> buildLogMsg err >>=)
