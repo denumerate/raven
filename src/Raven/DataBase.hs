@@ -29,13 +29,14 @@ ensureUsers p = access p master "raven"
 
 -- |Checks if a user exists, return rootAccess and id if so.
 -- Returns Nothing if user not fount, Just Right if an error occurs
-checkUser :: Pipe -> Text -> Text -> IO (Maybe (Either (Int,Bool) String))
+checkUser :: Pipe -> Text -> Text -> IO (Maybe (Either (Text,Bool) String))
 checkUser p name pass = access p master "raven"
   (findOne (select ["username" := String name,"password" := String pass]
             "users") >>=
     (\doc -> case doc of
         Just doc' -> case (doc' !? "_id",doc' !? "rootAccess") of
-          (Just id',Just acc) -> return $ Just $ Left (id',acc)
+          (Just (Oid _ id'),Just acc) -> return $ Just $ Left (Text.pack (show id'),acc)
           _ -> return $ Just $ Right $
             "User data corrupted for " ++ Text.unpack name
+            ++ ", Data: " ++ show doc
         _ -> return Nothing))

@@ -42,7 +42,7 @@ data LoginMsg = LoginMsg ByteString Text Text
   deriving (Generic,Binary,Typeable)
 
 -- |LoginSuccMsg holds: (id,access)
-data LoginSucMsg = LoginSucMsg (Int,Bool)
+data LoginSucMsg = LoginSucMsg (Text,Bool)
  deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg
