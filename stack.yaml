@@ -5,6 +5,7 @@ packages:
 extra-deps:
 - brick-0.17.1
 - distributed-process-0.6.6
+- random-strings-0.1.1.0
 - text-zipper-0.10
 - vty-5.15
 resolver: lts-7.16

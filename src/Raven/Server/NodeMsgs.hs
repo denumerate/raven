@@ -9,6 +9,8 @@ module Raven.Server.NodeMsgs
   , LogMsg(..)
   , LoginMsg(..)
   , LoginSucMsg(..)
+  , NewTokenMsg(..)
+  , LogoutMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
@@ -30,7 +32,7 @@ data REPLMsg = REPLMsg ByteString String
 data ProcessedMsg = ProcessedMsg ByteString String
   deriving (Generic,Binary,Typeable)
 
-data KillMsg = KillMsg
+data KillMsg = KillMsg ByteString
   deriving (Generic,Binary,Typeable)
 
 -- |LogMsg holds: the message, processId, timestamp
@@ -44,6 +46,13 @@ data LoginMsg = LoginMsg ByteString Text Text
 -- |LoginSuccMsg holds: (id,access)
 data LoginSucMsg = LoginSucMsg (Text,Bool)
  deriving (Generic,Binary,Typeable)
+
+-- |NewTokenMsg holds: (Token, id)
+data NewTokenMsg = NewTokenMsg (Text,Text)
+  deriving (Generic,Binary,Typeable)
+
+data LogoutMsg = LogoutMsg ByteString
+  deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg
 buildLogMsg :: String -> Process LogMsg
