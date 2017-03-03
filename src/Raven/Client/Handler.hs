@@ -94,12 +94,14 @@ handleCommand :: Connection -> (Text,Vector (Text,Text,Int),Int) ->
 handleCommand conn s@(c,ios,_) = let (cmd,_,_) = V.last ios in
   case cmd of
     ":quit" -> halt s
-    ":kill" -> suspendAndResume
-               (forkIO (send conn
-                         [":kill"] >>
-                         return ()) >>
-                return (c,V.snoc ios ("","",3),V.length ios))
-    _ -> continue (c,V.snoc ios ("","",3),V.length ios)
+    _ -> suspendAndResume
+            (forkIO (send conn
+                     [ B.pack $ show $ length ios - 1
+                     , " "
+                     , B.pack $ Text.unpack cmd --error possible
+                     ] >>
+                     return ()) >>
+             return (c,V.snoc ios ("","",3),V.length ios))
 
 -- |Handle app events
 handleApp :: (Text,Vector (Text,Text,Int),Int) -> [Text] ->

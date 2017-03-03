@@ -25,7 +25,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
   (\node -> putStrLn ("Server established at " ++ (show . address) end) >>
   newEmptyMVar >>=
     (\serverpid -> newREPLNode trans serverpid >>=
-      (\replNode -> newResourceNode trans >>=
+      (\replNode -> newResourceNode trans serverpid >>=
         (\resNode -> runProcess node
           (liftIO (readMVar resNode) >>=
            (\resNode' ->
@@ -66,8 +66,7 @@ listenAtEnd trans end serverN conns pid = receive end >>=
              (case Map.lookup cid conns of
                  Just conn -> let wds = B.words info in
                                 readMVar conn >>=
-                                handleReceived pid
-                                [head wds,B.unwords (tail wds)]
+                                handleReceived pid wds
                  Nothing -> runProcess serverN
                             (buildLogMsg "Connection not found in Map" >>=
                              Control.Distributed.Process.send pid)) >>
