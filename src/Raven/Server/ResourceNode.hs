@@ -64,9 +64,9 @@ handleKill h _ =
 -- the user exists and then makes sure that the returned data has the right information.
 -- Also sends a message to the connection node regarding success/failure
 handleLogin :: MVar ProcessId -> DB.Pipe -> (ProcessId,LoginMsg) -> Process ()
-handleLogin server p (cPID,LoginMsg n name pass) = liftIO (readMVar server) >>=
-  (\server' -> spawnLocal
-    (liftIO (checkUser p name pass) >>=
+handleLogin server p (cPID,LoginMsg n name pass) = spawnLocal
+  (liftIO (readMVar server) >>=
+   (\server' -> liftIO (checkUser p name pass) >>=
      (\ret -> case ret of
          (Just (Left info)) ->
            Control.Distributed.Process.send server' (cPID,LoginSucMsg info) >>
@@ -74,5 +74,5 @@ handleLogin server p (cPID,LoginMsg n name pass) = liftIO (readMVar server) >>=
          (Just (Right err)) -> buildLogMsg err >>=
            Control.Distributed.Process.send server' >>
            Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")
-         _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed"))) >>
-    return ())
+         _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")))) >>
+    return ()
