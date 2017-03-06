@@ -48,17 +48,21 @@ cleanResourceNode :: ResourceNode -> Process ()
 cleanResourceNode self = liftIO (readMVar self) >>=
   (`exit` "Cleaning ResourceNode")
 
--- |Handles a log message
+-- |Handles a log message by printing it to the supplied handle,
+-- should be the log file.
 handleLog :: Handle -> LogMsg -> Process ()
 handleLog h (LogMsg msg pid time) =
   liftIO (hPutStrLn h ("[" ++ show pid ++ ": " ++ time ++ "] " ++ msg))
 
--- |Handles a kill message
+-- |Handles a kill message by killing the node and closing (and flushing) the buffer.
 handleKill :: Handle -> KillMsg -> Process ()
 handleKill h _ =
   liftIO (hClose h) >>
   getSelfPid >>= (`exit` "Clean")
 
+-- |Handles a login message by sending a request to the database that makes sure
+-- the user exists and then makes sure that the returned data has the right information.
+-- Also sends a message to the connection node regarding success/failure
 handleLogin :: MVar ProcessId -> DB.Pipe -> (ProcessId,LoginMsg) -> Process ()
 handleLogin server p (cPID,LoginMsg n name pass) = liftIO (readMVar server) >>=
   (\server' -> spawnLocal
@@ -68,6 +72,7 @@ handleLogin server p (cPID,LoginMsg n name pass) = liftIO (readMVar server) >>=
            Control.Distributed.Process.send server' (cPID,LoginSucMsg info) >>
            Control.Distributed.Process.send cPID (ProcessedMsg n "Login Successful")
          (Just (Right err)) -> buildLogMsg err >>=
-           Control.Distributed.Process.send server'
+           Control.Distributed.Process.send server' >>
+           Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")
          _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed"))) >>
     return ())

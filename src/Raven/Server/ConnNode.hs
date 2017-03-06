@@ -75,7 +75,7 @@ handleReceived pid msg (connNode,_) = runProcess connNode
    ("Received, not recognized message from outside connection: " ++ show msg) >>=
    Control.Distributed.Process.send pid)
 
--- |Handle a kill message
+-- |Handle a kill message by killing the node
 handleKill :: Connection -> KillMsg -> Process ()
 handleKill conn _ = liftIO (close conn) >>
   getSelfPid >>= (`exit` ("Clean" :: ByteString))
@@ -86,9 +86,11 @@ cleanConnNode (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send self' (KillMsg "")))
 
--- |Handle a LogMsg
+-- |Handle a LogMsg by sending it to the supplied processId.
+-- Process should be the server node.
 handleLog :: ProcessId -> LogMsg -> Process ()
 handleLog = Control.Distributed.Process.send
 
+-- |Handles a NewToken message by updating the user information.
 handleNewToken :: MVar User -> NewTokenMsg -> Process ()
 handleNewToken u (NewTokenMsg ui) = liftIO $ putMVar u $ Just ui

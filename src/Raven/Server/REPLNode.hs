@@ -43,7 +43,7 @@ runREPL interpS (pid,(REPLMsg n value)) = spawnLocal
    Control.Distributed.Process.send pid . ProcessedMsg n) >>
   return ()
 
--- |Handles a kill message
+-- |Handles a kill message by killing the node
 handleKill :: KillMsg -> Process ()
 handleKill _ = getSelfPid >>=
   (`exit` "Clean")

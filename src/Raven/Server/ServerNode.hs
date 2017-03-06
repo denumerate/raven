@@ -103,12 +103,14 @@ listenAtEnd trans end serverN conns pid = receive end >>=
       readMVar val >>=
       cleanConnNode
 
--- |Handles a REPLMsg
+-- |Handles a REPLMsg by sending it on to the repl node
 handleREPL :: REPLNode -> (ProcessId,REPLMsg) -> Process ()
 handleREPL replNode msg = liftIO (readMVar replNode) >>=
   (`Control.Distributed.Process.send` msg)
 
--- |Handles a KillMsg
+-- |Handles a KillMsg by first ensuring that the user sending it has root access,
+-- and then sending a kill message to all connected nodes.
+-- Then closes the transport layer.
 handleKill :: MVar ConnMap -> MVar UserMap -> Transport -> EndPoint ->
   REPLNode -> ResourceNode -> (ProcessId,KillMsg) -> Process ()
 handleKill cMap uMap trans end replNode resNode (cPID,(KillMsg n)) =
@@ -138,15 +140,18 @@ handleKill cMap uMap trans end replNode resNode (cPID,(KillMsg n)) =
           liftIO (threadDelay 25000000) >>
           liftIO (closeTransport trans)
 
--- |Handle a LogMsg
+-- |Handles a LogMsg by sending it on to the resource node.
 handleLog :: ResourceNode -> LogMsg -> Process ()
 handleLog rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
 
+-- |Handles a Login message by passing it on to the resource node.
 handleLogin :: ResourceNode -> (ProcessId,LoginMsg) -> Process ()
 handleLogin rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
 
+-- |Handles a successful login message by linking the connection to the user,
+-- and then linking the user to its users information.
 handleLoginSuc :: MVar ConnMap -> MVar UserMap -> (ProcessId,LoginSucMsg) ->
   Process ()
 handleLoginSuc cMap uMap (cPID,LoginSucMsg (id',rAcc)) = spawnLocal
@@ -160,6 +165,8 @@ handleLoginSuc cMap uMap (cPID,LoginSucMsg (id',rAcc)) = spawnLocal
       (NewTokenMsg (Text.pack tok,id')))) >>
   return ()
 
+-- |Handles a logout message by removing the connection from the connection map,
+-- does not modify any user information.
 handleLogout :: MVar ConnMap -> (ProcessId,LogoutMsg) -> Process ()
 handleLogout cMap (cPID,LogoutMsg n) = spawnLocal
   (liftIO (takeMVar cMap) >>=
