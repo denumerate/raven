@@ -25,7 +25,7 @@ import Raven.Server.ResourceNode
 type ConnMap = Map ProcessId Text
 
 -- |Maps users to their info (Access)
-type UserMap = Map Text Bool
+type UserMap = Map Text (Bool)
 
 connTimeout = 1800000000
 tokenSize = 13
@@ -164,19 +164,14 @@ handleLoginSuc cMap uMap (cPID,LoginSucMsg (id',rAcc)) = spawnLocal
   (liftIO (takeMVar cMap) >>=
    (liftIO . putMVar cMap . Map.insert cPID id') >>
    liftIO (takeMVar uMap) >>=
-   (liftIO . putMVar uMap . Map.insert id' rAcc) >>
-   liftIO (randomWord randomASCII tokenSize) >>=
-   (\tok ->
-      Control.Distributed.Process.send cPID
-      (NewTokenMsg (Text.pack tok,id')))) >>
+   (liftIO . putMVar uMap . Map.insert id' rAcc)) >>
   return ()
 
 -- |Handles a logout message by removing the connection from the connection map,
 -- does not modify any user information.
 handleLogout :: MVar ConnMap -> (ProcessId,LogoutMsg) -> Process ()
 handleLogout cMap (cPID,LogoutMsg n) = spawnLocal
-  (Control.Distributed.Process.send cPID (LogoutMsg n) >>
-   liftIO (takeMVar cMap) >>=
+  (liftIO (takeMVar cMap) >>=
    liftIO . putMVar cMap . Map.delete cPID >>
    Control.Distributed.Process.send cPID
     (ProcessedMsg n "Logged Out")) >>

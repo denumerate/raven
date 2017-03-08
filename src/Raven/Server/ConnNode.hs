@@ -16,34 +16,27 @@ import Crypto.Hash
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as Text
-import Data.Text(Text)
 
 import Raven.Server.NodeMsgs
 
 -- |Stores the node and the id of the listen process
 type ConnNode = (LocalNode,MVar ProcessId)
 
--- |Stores information about the user on that connection (Token,Id)
-type User = Maybe (Text,Text)
-
 -- |Builds and returns node to handle connections.
 -- Needs the transport layer, server id, and the established connection
 newConnNode :: Transport -> ProcessId -> Connection -> IO ConnNode
 newConnNode trans server conn = newEmptyMVar >>=
-  (\pid -> newMVar Nothing >>=
-    (\cInfo -> newLocalNode trans initRemoteTable >>=
-      (\connNode ->
-         runProcess connNode
-        (spawnLocal (forever (receiveWait
+  (\pid -> newLocalNode trans initRemoteTable >>=
+    (\connNode ->
+       runProcess connNode
+       (spawnLocal (forever (receiveWait
                               [ match (sendResult conn)
                               , match (handleLog server)
                               , match (handleKill conn)
-                              , match (handleNewToken cInfo conn)
-                              , match (handleLogout cInfo)
                               , matchUnknown (catchAllMsgs server "ConnNode")
                               ])) >>=
          liftIO . putMVar pid) >>
-        return (connNode,pid))))
+        return (connNode,pid)))
 
 -- |Takes the result of the servers work and sends it back to the client
 sendResult :: Connection -> ProcessedMsg -> Process ()
@@ -56,7 +49,8 @@ sendResult conn (ProcessedMsg n msg) =
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
 handleReceived pid [n,":kill"] (connNode,self) = runProcess connNode
   (liftIO (readMVar self) >>=
-   (\self' -> Control.Distributed.Process.send pid (self',KillMsg n)))
+   (\self' -> Control.Distributed.Process.send pid
+     (self',KillMsg n)))
 handleReceived pid [n,":logon",name,pass] (connNode,self) = forkIO
   (readMVar self >>=
    (\self' -> runProcess connNode
@@ -91,16 +85,3 @@ cleanConnNode (connNode,self) = readMVar self >>=
 -- Process should be the server node.
 handleLog :: ProcessId -> LogMsg -> Process ()
 handleLog = Control.Distributed.Process.send
-
--- |Handles a NewToken message by updating the user information.
-handleNewToken :: MVar User -> Connection -> NewTokenMsg -> Process ()
-handleNewToken u conn (NewTokenMsg ui@(tok,_)) =
-  liftIO (takeMVar u) >>
-  liftIO (Network.Transport.send conn [B.pack $ Text.unpack tok]) >>
-  liftIO (putMVar u (Just ui))
-
--- |Handle a Logout message by updating the user information.
-handleLogout :: MVar User -> LogoutMsg -> Process ()
-handleLogout u _ =
-  liftIO (takeMVar u) >>
-  liftIO (putMVar u Nothing)

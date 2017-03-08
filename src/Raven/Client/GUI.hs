@@ -19,7 +19,6 @@ import Control.Concurrent
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.ByteString.Char8 as B
-import Data.ByteString.Char8(ByteString)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Data.List
@@ -43,17 +42,17 @@ guiMain conn end server =
           , appHandleEvent = handler conn
           , appStartEvent = return
           , appAttrMap = const $ attrMap Graphics.Vty.defAttr []
-          } :: App (Maybe ByteString,Text,Vector (Text,Text,Int),Int) [Text] RName)
+          } :: App (Text,Vector (Text,Text,Int),Int) [Text] RName)
   in newBChan buffersize >>=
      (\chan ->
          forkIO (listenAtEnd chan end) >>
          customMain (mkVty defaultConfig) (Just chan) app
-         (Nothing,(Text.pack . show) server,V.fromList [("","",3)],0)) >>
+         ((Text.pack . show) server,V.fromList [("","",3)],0)) >>
      return ()
 
 -- |All widgets
-myDraw :: (Maybe ByteString,Text,Vector (Text,Text,Int),Int) -> [Widget RName]
-myDraw (_,c,ios,_) = [ vBox [ hBorder
+myDraw :: (Text,Vector (Text,Text,Int),Int) -> [Widget RName]
+myDraw (c,ios,_) = [ vBox [ hBorder
                         , connStatus c
                         , hBorder
                         , workWidget ios
@@ -87,7 +86,7 @@ ioWidget = reverse . V.foldl' (\acc (i,o,c) ->
                                             [" > ",i,"\n ",o]))):acc) []
 
 -- |Handles the cursor
-handleCursor :: (Maybe ByteString, Text,Vector (Text,Text,Int),Int) ->
+handleCursor :: (Text,Vector (Text,Text,Int),Int) ->
   [CursorLocation n] -> Maybe (CursorLocation n)
 handleCursor _ = foldl' choose Nothing
   where
