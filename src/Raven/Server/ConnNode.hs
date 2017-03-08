@@ -39,6 +39,7 @@ newConnNode trans server conn = newEmptyMVar >>=
                               , match (handleLog server)
                               , match (handleKill conn)
                               , match (handleNewToken cInfo)
+                              , match (handleLogout cInfo)
                               , matchUnknown (catchAllMsgs server "ConnNode")
                               ])) >>=
          liftIO . putMVar pid) >>
@@ -96,3 +97,9 @@ handleNewToken :: MVar User -> NewTokenMsg -> Process ()
 handleNewToken u (NewTokenMsg ui) =
   liftIO (takeMVar u) >>
   liftIO (putMVar u (Just ui))
+
+-- |Handle a Logout message by updating the user information.
+handleLogout :: MVar User -> LogoutMsg -> Process ()
+handleLogout u _ =
+  liftIO (takeMVar u) >>
+  liftIO (putMVar u Nothing)
