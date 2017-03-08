@@ -13,8 +13,6 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
-import Test.RandomStrings
-import qualified Data.Text as Text
 
 import Raven.Server.NodeMsgs
 import Raven.Server.ConnNode

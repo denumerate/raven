@@ -13,7 +13,6 @@ import Graphics.Vty
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.ByteString.Char8 as B
-import Data.ByteString.Char8 (ByteString)
 import Text.Read
 import Data.Vector (Vector)
 import qualified Data.Vector as V
