@@ -37,7 +37,7 @@ newResourceNode trans server =
           (spawnLocal (forever (receiveWait
                                  [ match (handleLog logH)
                                  , match (handleLogin server db)
-                                 , match (handleKill logH)
+                                 , match (handleKill logH db)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -55,8 +55,9 @@ handleLog h (LogMsg msg pid time) =
   liftIO (hPutStrLn h ("[" ++ show pid ++ ": " ++ time ++ "] " ++ msg))
 
 -- |Handles a kill message by killing the node and closing (and flushing) the buffer.
-handleKill :: Handle -> KillMsg -> Process ()
-handleKill h _ =
+handleKill :: Handle -> DB.Pipe -> KillMsg -> Process ()
+handleKill h p _ =
+  liftIO (DB.close p) >>
   liftIO (hClose h) >>
   getSelfPid >>= (`exit` "Clean")
 
