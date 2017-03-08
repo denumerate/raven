@@ -99,11 +99,16 @@ handleCursor _ = foldl' choose Nothing
 listenAtEnd :: BChan [Text] -> EndPoint -> IO ()
 listenAtEnd chan end = receive end >>=
   (\event -> case event of
-      Received _ [info] -> let wds = B.words info in
-                             forkIO (writeBChan chan
-                                 (map (Text.pack . B.unpack)
-                                 [head wds,B.unwords (tail wds)])) >>
-        listenAtEnd chan end
+      Received _ [info] ->
+        case B.words info of
+          tok@[_] -> forkIO (writeBChan chan
+                           (map (Text.pack . B.unpack)
+                            tok)) >>
+             listenAtEnd chan end
+          wds -> forkIO (writeBChan chan
+                          (map (Text.pack . B.unpack)
+                            [head wds,B.unwords (tail wds)])) >>
+             listenAtEnd chan end
       ConnectionClosed _ -> writeBChan chan ["Connection Error: Connection Closed"]
       EndPointClosed -> writeBChan chan ["Connection Error: Endpoint Closed"]
       _ -> listenAtEnd chan end)

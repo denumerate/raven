@@ -38,7 +38,7 @@ newConnNode trans server conn = newEmptyMVar >>=
                               [ match (sendResult conn)
                               , match (handleLog server)
                               , match (handleKill conn)
-                              , match (handleNewToken cInfo)
+                              , match (handleNewToken cInfo conn)
                               , match (handleLogout cInfo)
                               , matchUnknown (catchAllMsgs server "ConnNode")
                               ])) >>=
@@ -93,9 +93,10 @@ handleLog :: ProcessId -> LogMsg -> Process ()
 handleLog = Control.Distributed.Process.send
 
 -- |Handles a NewToken message by updating the user information.
-handleNewToken :: MVar User -> NewTokenMsg -> Process ()
-handleNewToken u (NewTokenMsg ui) =
+handleNewToken :: MVar User -> Connection -> NewTokenMsg -> Process ()
+handleNewToken u conn (NewTokenMsg ui@(tok,_)) =
   liftIO (takeMVar u) >>
+  liftIO (Network.Transport.send conn [B.pack $ Text.unpack tok]) >>
   liftIO (putMVar u (Just ui))
 
 -- |Handle a Logout message by updating the user information.
