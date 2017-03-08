@@ -94,6 +94,11 @@ listenAtEnd trans end serverN conns pid = receive end >>=
       EndPointClosed -> putStrLn "EndPoint Closed" >>
                         return (Map.map clean conns) >>
                         return ()
+      ErrorEvent (TransportError _ err) ->
+        (runProcess serverN
+          (buildLogMsg ("EndPoint Error: " ++ err) >>=
+            Control.Distributed.Process.send pid)) >>
+             listenAtEnd trans end serverN conns pid
       _ -> forkIO (runProcess serverN
                    (buildLogMsg "Uncaught event at endpoint" >>=
                     Control.Distributed.Process.send pid)) >>
@@ -105,7 +110,8 @@ listenAtEnd trans end serverN conns pid = receive end >>=
 
 -- |Handles a REPLMsg by sending it on to the repl node
 handleREPL :: REPLNode -> (ProcessId,REPLMsg) -> Process ()
-handleREPL replNode msg = liftIO (readMVar replNode) >>=
+handleREPL replNode msg =
+  liftIO (readMVar replNode) >>=
   (`Control.Distributed.Process.send` msg)
 
 -- |Handles a KillMsg by first ensuring that the user sending it has root access,

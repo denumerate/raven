@@ -40,7 +40,7 @@ runREPL :: MVar (Interpreter ()) -> (ProcessId,REPLMsg) -> Process ()
 runREPL interpS (pid,(REPLMsg n value)) = spawnLocal
   (liftIO (readMVar interpS) >>=
    (\interpS' -> liftIO (interp interpS' value)) >>=
-   Control.Distributed.Process.send pid . ProcessedMsg n) >>
+    Control.Distributed.Process.send pid . ProcessedMsg n) >>
   return ()
 
 -- |Handles a kill message by killing the node

@@ -30,7 +30,7 @@ type User = Maybe (Text,Text)
 -- Needs the transport layer, server id, and the established connection
 newConnNode :: Transport -> ProcessId -> Connection -> IO ConnNode
 newConnNode trans server conn = newEmptyMVar >>=
-  (\pid -> newMVar (Nothing) >>=
+  (\pid -> newMVar Nothing >>=
     (\cInfo -> newLocalNode trans initRemoteTable >>=
       (\connNode ->
          runProcess connNode
@@ -47,7 +47,7 @@ newConnNode trans server conn = newEmptyMVar >>=
 -- |Takes the result of the servers work and sends it back to the client
 sendResult :: Connection -> ProcessedMsg -> Process ()
 sendResult conn (ProcessedMsg n msg) =
-  liftIO $ Network.Transport.send conn [n," ",B.pack msg] >> --error possible here
+  liftIO (Network.Transport.send conn [n," ",B.pack msg]) >> --error possible here
   return ()
 
 -- |Handles the data send by a received event
@@ -93,4 +93,6 @@ handleLog = Control.Distributed.Process.send
 
 -- |Handles a NewToken message by updating the user information.
 handleNewToken :: MVar User -> NewTokenMsg -> Process ()
-handleNewToken u (NewTokenMsg ui) = liftIO $ putMVar u $ Just ui
+handleNewToken u (NewTokenMsg ui) =
+  liftIO (takeMVar u) >>
+  liftIO (putMVar u (Just ui))
