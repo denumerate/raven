@@ -11,6 +11,7 @@ module Raven.Server.NodeMsgs
   , LoginSucMsg(..)
   , NewTokenMsg(..)
   , LogoutMsg(..)
+  , REPLInfoMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
@@ -52,6 +53,9 @@ data NewTokenMsg = NewTokenMsg (Text,Text)
   deriving (Generic,Binary,Typeable)
 
 data LogoutMsg = LogoutMsg ByteString
+  deriving (Generic,Binary,Typeable)
+
+data REPLInfoMsg = REPLInfoMsg ByteString
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg

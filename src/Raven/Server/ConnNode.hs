@@ -58,6 +58,9 @@ handleReceived pid [n,":logon",name,pass] (connNode,self) = forkIO
       (self',LoginMsg n (Text.pack (B.unpack name))
         (Text.pack (show (hash pass :: Digest SHA3_512))))))) >>
   return ()
+handleReceived pid [n,":repl?"] (connNode,self) = runProcess connNode
+  (liftIO (readMVar self) >>=
+   (\self' -> Control.Distributed.Process.send pid (self', REPLInfoMsg n)))
 handleReceived pid [n,":logout"] (connNode,self) = runProcess connNode
   (liftIO (readMVar self) >>=
    (\self' -> Control.Distributed.Process.send pid (self', LogoutMsg n)))
