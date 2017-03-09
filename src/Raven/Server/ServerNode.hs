@@ -50,6 +50,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                    , match (handleKill conMap uMap
                                              trans end resNode)
                                    , match (handleREPLInfo conMap uMap)
+                                   , match (handleStopREPL conMap uMap)
                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                    ])) >>=
               (\lpid -> liftIO (putMVar serverpid lpid) >>
@@ -208,20 +209,48 @@ handleLogout cMap (cPID,LogoutMsg n) = spawnLocal
 -- |Handles a REPLInfoMsg by sending back if the user has an existing REPLNode
 handleREPLInfo :: MVar ConnMap -> MVar UserMap -> (ProcessId,REPLInfoMsg) ->
   Process ()
-handleREPLInfo cMap uMap (cPID,REPLInfoMsg n) =
-  liftIO (readMVar cMap) >>=
-  return . Map.lookup cPID >>=
-  (\cMap' -> case cMap' of
-      Just uid ->
-        liftIO (readMVar uMap) >>=
-        return . Map.lookup uid >>=
-        (\user -> case user of
-            Just (_,Just _) -> Control.Distributed.Process.send cPID
-                               (ProcessedMsg n "REPL is running")
-            Just (_,Nothing) -> Control.Distributed.Process.send cPID
+handleREPLInfo cMap uMap (cPID,REPLInfoMsg n) = spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\cMap' -> case cMap' of
+       Just uid ->
+         liftIO (readMVar uMap) >>=
+         return . Map.lookup uid >>=
+         (\user -> case user of
+             Just (_,Just _) -> Control.Distributed.Process.send cPID
+                                (ProcessedMsg n "REPL is running")
+             Just (_,Nothing) -> Control.Distributed.Process.send cPID
+                                 (ProcessedMsg n "REPL is not running")
+             _ -> failed)
+       _ -> failed)) >>
+  return ()
+  where
+    failed = Control.Distributed.Process.send cPID
+             (ProcessedMsg n "Please Login")
+
+-- |Handles a StopREPLMSG by killing the connected repl node (if existing)
+handleStopREPL :: MVar ConnMap -> MVar UserMap -> (ProcessId,StopREPLMSG) ->
+  Process ()
+handleStopREPL cMap uMap (cPID,StopREPLMSG n) = spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\cMap' -> case cMap' of
+       Just uid ->
+         liftIO (readMVar uMap) >>=
+         return . Map.lookup uid >>=
+         (\user -> case user of
+             Just (acc,Just rNode) ->
+               liftIO (readMVar rNode) >>=
+               (`Control.Distributed.Process.send` (KillMsg "")) >>
+               liftIO (takeMVar uMap) >>=
+               liftIO . putMVar uMap . Map.insert uid (acc,Nothing) >>
+               Control.Distributed.Process.send cPID
+                   (ProcessedMsg n "REPL has been stopped")
+             Just (_,Nothing) -> Control.Distributed.Process.send cPID
                                 (ProcessedMsg n "REPL is not running")
-            _ -> failed)
-      _ -> failed)
+             _ -> failed)
+       _ -> failed)) >>
+  return ()
   where
     failed = Control.Distributed.Process.send cPID
              (ProcessedMsg n "Please Login")
