@@ -23,7 +23,7 @@ import Raven.Server.ResourceNode
 type ConnMap = Map ProcessId Text
 
 -- |Maps users to their info (Access)
-type UserMap = Map Text (Bool)
+type UserMap = Map Text (Bool,Maybe REPLNode)
 
 connTimeout = 1800000000
 tokenSize = 13
@@ -122,8 +122,8 @@ handleKill cMap uMap trans end replNode resNode (cPID,(KillMsg n)) =
   (\cMap' -> case Map.lookup cPID cMap' of
       Just id' -> liftIO (readMVar uMap) >>=
         (\uMap' -> case Map.lookup id' uMap' of
-            Just True -> kill'
-            Just False ->
+            Just (True,_) -> kill'
+            Just (False,_) ->
               Control.Distributed.Process.send cPID
               (ProcessedMsg n "You cannot do that")
             _ -> Control.Distributed.Process.send cPID
@@ -162,7 +162,7 @@ handleLoginSuc cMap uMap (cPID,LoginSucMsg (id',rAcc)) = spawnLocal
   (liftIO (takeMVar cMap) >>=
    (liftIO . putMVar cMap . Map.insert cPID id') >>
    liftIO (takeMVar uMap) >>=
-   (liftIO . putMVar uMap . Map.insert id' rAcc)) >>
+   (liftIO . putMVar uMap . Map.insert id' (rAcc,Nothing))) >>
   return ()
 
 -- |Handles a logout message by removing the connection from the connection map,
