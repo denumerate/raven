@@ -38,6 +38,7 @@ newResourceNode trans server =
                                  [ match (handleLog logH)
                                  , match (handleLogin server db)
                                  , match (handleKill logH db)
+                                 , match (handleAllUsers db)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -77,3 +78,11 @@ handleLogin server p (cPID,LoginMsg n name pass) = spawnLocal
            Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")
          _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")))) >>
     return ()
+
+-- |Handles an allUsers message by asking the database for all users, formatting them,
+-- and sending them back to the connection node.
+handleAllUsers :: DB.Pipe -> (ProcessId,AllUsersMsg) -> Process ()
+handleAllUsers p (cPID,AllUsersMsg n) = spawnLocal
+  (liftIO (getAllUsers p) >>=
+   Control.Distributed.Process.send cPID . ProcessedMsg n) >>
+  return ()

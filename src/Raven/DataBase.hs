@@ -1,7 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings
+, ScopedTypeVariables
+#-}
 module Raven.DataBase
   ( ensureUsers
   , checkUser
+  , getAllUsers
   )where
 
 import Database.MongoDB
@@ -9,7 +12,7 @@ import Crypto.Hash
 
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Data.List
+import Data.List (foldl')
 
 -- |Default root info
 root :: Document
@@ -46,5 +49,16 @@ checkUser p name pass = access p master "raven"
 getAllUsers :: Pipe -> IO String
 getAllUsers p = access p master "raven"
   (find (select [] "users") >>= rest >>=
-  return . foldl' (\acc val ->) "" >>=
+  return . foldl' handleUser "" >>=
   return . Text.unpack)
+  where
+    handleUser acc vl =
+      case (vl !? "username",vl !? "rootAccess") of
+        (Just name,Just (rootAcc :: Bool)) ->
+          Text.concat [ name
+                      , ": "
+                      , Text.pack $ show rootAcc
+                      , "\n"
+                      , acc
+                      ]
+        _ -> Text.concat [ "User data corrupted\n",acc]
