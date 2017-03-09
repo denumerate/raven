@@ -5,6 +5,7 @@ module Raven.DataBase
   ( ensureUsers
   , checkUser
   , getAllUsers
+  , Raven.DataBase.addUser
   )where
 
 import Database.MongoDB
@@ -12,6 +13,7 @@ import Crypto.Hash
 
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.ByteString.Char8 (ByteString)
 import Data.List (foldl')
 
 -- |Default root info
@@ -62,3 +64,16 @@ getAllUsers p = access p master "raven"
                       , acc
                       ]
         _ -> Text.concat [ "User data corrupted\n",acc]
+
+-- |Add a user to the database and returns outcome
+addUser :: Pipe -> Text -> ByteString -> Bool -> IO String
+addUser p name pswd rootAcc = access p master "raven"
+  (find (select ["username" := String name] "users") >>= rest >>=
+   (\us -> if null us
+     then insert "users" [ "username" := String name
+                         , "password" :=
+                           String (Text.pack (show (hash pswd :: Digest SHA3_512)))
+                         , "rootAccess" := Bool rootAcc
+                         ] >>
+          return "User created"
+     else return "User already exists"))

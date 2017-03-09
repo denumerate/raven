@@ -39,6 +39,7 @@ newResourceNode trans server =
                                  , match (handleLogin server db)
                                  , match (handleKill logH db)
                                  , match (handleAllUsers db)
+                                 , match (handleAddUser db)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -84,5 +85,13 @@ handleLogin server p (cPID,LoginMsg n name pass) = spawnLocal
 handleAllUsers :: DB.Pipe -> (ProcessId,AllUsersMsg) -> Process ()
 handleAllUsers p (cPID,AllUsersMsg n) = spawnLocal
   (liftIO (getAllUsers p) >>=
+   Control.Distributed.Process.send cPID . ProcessedMsg n) >>
+  return ()
+
+-- |Handles an addUser message by asking the database to add a user and sending
+-- the result back to the connNode.
+handleAddUser :: DB.Pipe -> (ProcessId,AddUserMsg) -> Process ()
+handleAddUser p (cPID,AddUserMsg n name pswd rAcc) = spawnLocal
+  (liftIO (addUser p name pswd rAcc) >>=
    Control.Distributed.Process.send cPID . ProcessedMsg n) >>
   return ()
