@@ -67,6 +67,9 @@ handleReceived pid [n,":logout"] (connNode,self) = runProcess connNode
 handleReceived pid [n,":stoprepl"] (connNode,self) = runProcess connNode
   (liftIO (readMVar self) >>=
    (\self' -> Control.Distributed.Process.send pid (self', StopREPLMSG n)))
+handleReceived pid [n,":allUsers"] (connNode,self) = runProcess connNode
+  (liftIO (readMVar self) >>=
+   (\self' -> Control.Distributed.Process.send pid (self', AllUsersMsg n)))
 handleReceived pid (n:msg) (connNode,self) = readMVar self >>=
   (\self' -> runProcess connNode
     (Control.Distributed.Process.send pid (self',REPLMsg n

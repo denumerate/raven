@@ -13,6 +13,7 @@ module Raven.Server.NodeMsgs
   , LogoutMsg(..)
   , REPLInfoMsg(..)
   , StopREPLMSG(..)
+  , AllUsersMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
@@ -60,6 +61,9 @@ data REPLInfoMsg = REPLInfoMsg ByteString
   deriving (Generic,Binary,Typeable)
 
 data StopREPLMSG = StopREPLMSG ByteString
+  deriving (Generic,Binary,Typeable)
+
+data AllUsersMsg = AllUsersMsg ByteString
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg

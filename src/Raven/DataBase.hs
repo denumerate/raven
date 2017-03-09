@@ -9,6 +9,7 @@ import Crypto.Hash
 
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.List
 
 -- |Default root info
 root :: Document
@@ -40,3 +41,10 @@ checkUser p name pass = access p master "raven"
             "User data corrupted for " ++ Text.unpack name
             ++ ", Data: " ++ show doc
         _ -> return Nothing))
+
+-- |Get all user information (formatted)
+getAllUsers :: Pipe -> IO String
+getAllUsers p = access p master "raven"
+  (find (select [] "users") >>= rest >>=
+  return . foldl' (\acc val ->) "" >>=
+  return . Text.unpack)

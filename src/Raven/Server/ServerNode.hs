@@ -51,6 +51,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                              trans end resNode)
                                    , match (handleREPLInfo conMap uMap)
                                    , match (handleStopREPL conMap uMap)
+                                   , match (handleAllUsers conMap uMap resNode)
                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                    ])) >>=
               (\lpid -> liftIO (putMVar serverpid lpid) >>
@@ -248,6 +249,30 @@ handleStopREPL cMap uMap (cPID,StopREPLMSG n) = spawnLocal
                    (ProcessedMsg n "REPL has been stopped")
              Just (_,Nothing) -> Control.Distributed.Process.send cPID
                                 (ProcessedMsg n "REPL is not running")
+             _ -> failed)
+       _ -> failed)) >>
+  return ()
+  where
+    failed = Control.Distributed.Process.send cPID
+             (ProcessedMsg n "Please Login")
+
+-- |Handles an AllUsersMsg by checking root access and, if allowed,
+-- sending the request on to the resource node.
+handleAllUsers :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
+  (ProcessId,AllUsersMsg) -> Process ()
+handleAllUsers cMap uMap rNode msg@(cPID,AllUsersMsg n) = spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\cMap' -> case cMap' of
+       Just uid ->
+         liftIO (readMVar uMap) >>=
+         return . Map.lookup uid >>=
+         (\user -> case user of
+             Just (True,_) ->
+               liftIO (readMVar rNode) >>=
+               (`Control.Distributed.Process.send` msg)
+             Just (False,_) -> Control.Distributed.Process.send cPID
+                                (ProcessedMsg n "You do not have root access")
              _ -> failed)
        _ -> failed)) >>
   return ()
