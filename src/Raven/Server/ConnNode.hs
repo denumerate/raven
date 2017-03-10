@@ -18,6 +18,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as Text
 
 import Raven.Server.NodeMsgs
+import Raven.Server.Commands
 
 -- |Stores the node and the id of the listen process
 type ConnNode = (LocalNode,MVar ProcessId)
@@ -47,33 +48,12 @@ sendResult conn (ProcessedMsg n msg) =
 -- |Handles the data send by a received event
 -- needs the servers process id
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
-handleReceived pid [n,":kill"] (connNode,self) = runProcess connNode
-  (liftIO (readMVar self) >>=
-   (\self' -> Control.Distributed.Process.send pid
-     (self',KillMsg n)))
-handleReceived pid [n,":logon",name,pass] (connNode,self) = forkIO
-  (readMVar self >>=
-   (\self' -> runProcess connNode
-     (Control.Distributed.Process.send pid
-      (self',LoginMsg n (Text.pack (B.unpack name))
-        (Text.pack (show (hash pass :: Digest SHA3_512))))))) >>
-  return ()
-handleReceived pid [n,":repl?"] (connNode,self) = runProcess connNode
-  (liftIO (readMVar self) >>=
-   (\self' -> Control.Distributed.Process.send pid (self', REPLInfoMsg n)))
-handleReceived pid [n,":logout"] (connNode,self) = runProcess connNode
-  (liftIO (readMVar self) >>=
-   (\self' -> Control.Distributed.Process.send pid (self', LogoutMsg n)))
-handleReceived pid [n,":stoprepl"] (connNode,self) = runProcess connNode
-  (liftIO (readMVar self) >>=
-   (\self' -> Control.Distributed.Process.send pid (self', StopREPLMSG n)))
-handleReceived pid [n,":allUsers"] (connNode,self) = runProcess connNode
-  (liftIO (readMVar self) >>=
-   (\self' -> Control.Distributed.Process.send pid (self', AllUsersMsg n)))
-handleReceived pid (n:msg) (connNode,self) = readMVar self >>=
-  (\self' -> runProcess connNode
-    (Control.Distributed.Process.send pid (self',REPLMsg n
-                                            (B.unpack (B.unwords msg)))))
+handleReceived pid cmd@(n:msg) (connNode,self) = readMVar self >>=
+  (\self' -> if B.isPrefixOf ":" (head msg)
+    then runProcess connNode (parseCommand pid self' cmd)
+    else runProcess connNode
+         (Control.Distributed.Process.send pid (self',REPLMsg n
+                                                 (B.unpack (B.unwords msg)))))
 handleReceived pid msg (connNode,_) = runProcess connNode
   (buildLogMsg
    ("Received, not recognized message from outside connection: " ++ show msg) >>=
