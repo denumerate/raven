@@ -337,16 +337,16 @@ handleDeleteUserSucc :: MVar UserMap -> (ProcessId,DeleteUserSuccMsg) ->
   Process ()
 handleDeleteUserSucc uMap (cPID,DeleteUserSuccMsg n id') = spawnLocal
   (liftIO (takeMVar uMap) >>=
-   (\uMap' -> return (Map.lookup id' uMap') >>=
-     (\user -> case user of
-         Just (_,Just rNode) -> liftIO (readMVar rNode) >>=
-           (`Control.Distributed.Process.send` (KillMsg "")) >>
-           Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
-           liftIO (putMVar uMap (Map.delete id' uMap'))
-         Just _ ->
-           Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
-           liftIO (putMVar uMap (Map.delete id' uMap'))
-         _ ->
-           Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
-           liftIO (putMVar uMap uMap')))) >>
+    (\uMap' -> return (Map.lookup id' uMap') >>=
+      (\user -> case user of
+          Just (_,Just rNode) -> liftIO (readMVar rNode) >>=
+            (`Control.Distributed.Process.send` (KillMsg "")) >>
+            Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+            liftIO (putMVar uMap (Map.delete id' uMap'))
+          Just _ ->
+            Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+            liftIO (putMVar uMap (Map.delete id' uMap'))
+          _ ->
+            Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+            liftIO (putMVar uMap uMap')))) >>
   return ()
