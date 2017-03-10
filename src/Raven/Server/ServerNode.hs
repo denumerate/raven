@@ -25,8 +25,8 @@ type ConnMap = Map ProcessId Text
 -- |Maps users to their info (Access)
 type UserMap = Map Text (Bool,Maybe REPLNode)
 
+-- |This is a guess as to what the value should be, documentation is unclear.
 connTimeout = 1800000000
-tokenSize = 13
 
 -- |Builds a server node and all internal processes
 newServerNode :: Transport -> EndPoint -> IO ()
@@ -53,6 +53,8 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                    , match (handleStopREPL conMap uMap)
                                    , match (handleAllUsers conMap uMap resNode)
                                    , match (handleAddUser conMap uMap resNode)
+                                   , match (handleDeleteUser conMap uMap resNode)
+                                   , match (handleDeleteUserSucc uMap)
                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                    ])) >>=
               (\lpid -> liftIO (putMVar serverpid lpid) >>
@@ -304,3 +306,47 @@ handleAddUser cMap uMap rNode msg@(cPID,AddUserMsg n _ _ _) = spawnLocal
   where
     failed = Control.Distributed.Process.send cPID
              (ProcessedMsg n "Please Login")
+
+-- |Handles an deleteUserMsg by checking user permissions and then passing
+-- the message on if allowed.
+handleDeleteUser :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
+  (ProcessId,DeleteUserMsg) -> Process ()
+handleDeleteUser cMap uMap rNode msg@(cPID,DeleteUserMsg n _) = spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\cMap' -> case cMap' of
+       Just uid ->
+         liftIO (readMVar uMap) >>=
+         return . Map.lookup uid >>=
+         (\user -> case user of
+             Just (True,_) ->
+               liftIO (readMVar rNode) >>=
+               (`Control.Distributed.Process.send` msg)
+             Just (False,_) -> Control.Distributed.Process.send cPID
+                                (ProcessedMsg n "You do not have root access")
+             _ -> failed)
+       _ -> failed)) >>
+  return ()
+  where
+    failed = Control.Distributed.Process.send cPID
+             (ProcessedMsg n "Please Login")
+
+-- |Handles a DeleteUserSucc message by removing the id from the map an then
+-- sending a message to the connNode.
+handleDeleteUserSucc :: MVar UserMap -> (ProcessId,DeleteUserSuccMsg) ->
+  Process ()
+handleDeleteUserSucc uMap (cPID,DeleteUserSuccMsg n id') = spawnLocal
+  (liftIO (takeMVar uMap) >>=
+   (\uMap' -> return (Map.lookup id' uMap') >>=
+     (\user -> case user of
+         Just (_,Just rNode) -> liftIO (readMVar rNode) >>=
+           (`Control.Distributed.Process.send` (KillMsg "")) >>
+           Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+           liftIO (putMVar uMap (Map.delete id' uMap'))
+         Just _ ->
+           Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+           liftIO (putMVar uMap (Map.delete id' uMap'))
+         _ ->
+           Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+           liftIO (putMVar uMap uMap')))) >>
+  return ()

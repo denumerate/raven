@@ -52,6 +52,9 @@ cmdMap = Map.fromList
   , (":addUser",Cmd { parseFunc = parseAddUser
                     , help = helpAddUser
                     })
+  , (":deleteUser",Cmd { parseFunc = parseDeleteUser
+                       , help = helpDeleteUser
+                       })
   ]
 
 -- |runs commands
@@ -229,3 +232,22 @@ helpAddUser =
   \the second is the password, and the user is given the supplied root access if\n\
   \the third argument can be parsed into a Bool, and doesn't have access otherwise.\n\
   \This command requires a logged in user with root access."
+
+-- |parse a deleteUser command
+parseDeleteUser :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseDeleteUser _ self [n,":deleteUser","root"] =
+  send self $ ProcessedMsg n "You cannot delete this user"
+parseDeleteUser server self [n,":deleteUser",usr] =
+  send server (self,DeleteUserMsg n $ Text.pack $ B.unpack usr)
+parseDeleteUser _ self (n:":deleteUser":_) =
+  send self $ ProcessedMsg n ":deleteUser takes one argument"
+parseDeleteUser server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |deleteUser information
+helpDeleteUser :: ByteString
+helpDeleteUser =
+  ":deleteUser attempts to remove a user from the server and sends back the result.\n\
+  \The command takes one argument (the username) and requires a logged on user with \
+  \root access."

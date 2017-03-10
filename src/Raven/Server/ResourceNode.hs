@@ -40,6 +40,7 @@ newResourceNode trans server =
                                  , match (handleKill logH db)
                                  , match (handleAllUsers db)
                                  , match (handleAddUser db)
+                                 , match (handleDeleteUser db server)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -95,3 +96,15 @@ handleAddUser p (cPID,AddUserMsg n name pswd rAcc) = spawnLocal
   (liftIO (addUser p name pswd rAcc) >>=
    Control.Distributed.Process.send cPID . ProcessedMsg n) >>
   return ()
+
+-- |Handles a delete user message by asking the database to remove the user.
+-- If successful, tell the severnode, if not, tells connNode
+handleDeleteUser :: DB.Pipe -> MVar ProcessId -> (ProcessId,DeleteUserMsg) ->
+  Process ()
+handleDeleteUser p server (cPID,DeleteUserMsg n name) =
+  liftIO (deleteUser p name) >>=
+  (\out -> case out of
+      Just id' -> liftIO (readMVar server) >>=
+        (`Control.Distributed.Process.send` (cPID,DeleteUserSuccMsg n id'))
+      _ -> Control.Distributed.Process.send cPID
+        (ProcessedMsg n "User not found"))

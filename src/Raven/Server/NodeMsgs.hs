@@ -15,6 +15,8 @@ module Raven.Server.NodeMsgs
   , StopREPLMSG(..)
   , AllUsersMsg(..)
   , AddUserMsg(..)
+  , DeleteUserMsg(..)
+  , DeleteUserSuccMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
@@ -69,6 +71,12 @@ data AllUsersMsg = AllUsersMsg ByteString
 
 -- |n,username,passwd,rootaccess
 data AddUserMsg = AddUserMsg ByteString Text Text Bool
+  deriving (Generic,Binary,Typeable)
+
+data DeleteUserMsg = DeleteUserMsg ByteString Text
+  deriving (Generic,Binary,Typeable)
+
+data DeleteUserSuccMsg = DeleteUserSuccMsg ByteString Text
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg

@@ -6,6 +6,7 @@ module Raven.DataBase
   , checkUser
   , getAllUsers
   , Raven.DataBase.addUser
+  , deleteUser
   )where
 
 import Database.MongoDB
@@ -13,7 +14,6 @@ import Crypto.Hash
 
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Data.ByteString.Char8 (ByteString)
 import Data.List (foldl')
 
 -- |Default root info
@@ -76,3 +76,14 @@ addUser p name pswd rootAcc = access p master "raven"
                          ] >>
           return "User created"
      else return "User already exists"))
+
+-- |Delete a user from the database and return the id if successful
+deleteUser :: Pipe -> Text -> IO (Maybe Text)
+deleteUser p name = access p master "raven"
+  (findOne (select ["username" := String name] "users") >>=
+   (\user -> case user of
+       Just user' -> delete (select ["username" := String name] "users") >>
+         case user' !? "_id" of
+           Just (Oid _ id') -> return $ Just $ Text.pack $ show id'
+           _ -> return Nothing
+       _ -> return Nothing))
