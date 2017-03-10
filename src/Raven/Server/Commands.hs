@@ -12,6 +12,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.List (foldl')
+import Text.Read
 
 import Raven.Server.NodeMsgs
 
@@ -48,6 +49,9 @@ cmdMap = Map.fromList
   , (":help",Cmd { parseFunc = parseHelp cmdMap
                  , help = helpHelp
                  })
+  , (":addUser",Cmd { parseFunc = parseAddUser
+                    , help = helpAddUser
+                    })
   ]
 
 -- |runs commands
@@ -192,3 +196,36 @@ helpHelp =
   ":help returns information on existing commands.\n\
   \The command either takes no arguments and returns information on all commands, \n\
   \or takes a list of commands and searches for the accompanying information."
+
+-- |parse the addUsers command
+parseAddUser :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseAddUser server self [n,":addUser",name,pass] =
+  send server (self,AddUserMsg n (Text.pack (B.unpack name))
+              (Text.pack (show (hash pass :: Digest SHA3_512))) False)
+parseAddUser server self [n,":addUser",name] =
+  send server (self,AddUserMsg n (Text.pack (B.unpack name))
+              (Text.pack (show (hashlazy "entry" :: Digest SHA3_512))) False)
+parseAddUser server self [n,":addUser",name,pass,root] =
+  case (readMaybe (B.unpack root) :: Maybe Bool) of
+    Just root' -> send server (self,AddUserMsg n (Text.pack (B.unpack name))
+                                (Text.pack (show (hash pass :: Digest SHA3_512))) root')
+    _ -> send server (self,AddUserMsg n (Text.pack (B.unpack name))
+                       (Text.pack (show (hash pass :: Digest SHA3_512))) False)
+parseAddUser _ self (n:":addUser":_) =
+  send self (ProcessedMsg n ":addUser accepts [1,3] arguments")
+parseAddUser server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |information for addUsers
+helpAddUser :: ByteString
+helpAddUser =
+  ":addUser attempts to add a user and sends back the result.\n\
+  \If the command is given one argument the argument is the username,\n\
+  \the password is entry, and the user does not have root access.\n\
+  \If the command is given two arguments the first argument is the username,\n\
+  \the second is the password, and the user is not given root access.\n\
+  \If the command is given three arguments the first argument is the username,\n\
+  \the second is the password, and the user is given the supplied root access if\n\
+  \the third argument can be parsed into a Bool, and doesn't have access otherwise.\n\
+  \This command requires a logged in user with root access."

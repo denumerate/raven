@@ -66,13 +66,12 @@ getAllUsers p = access p master "raven"
         _ -> Text.concat [ "User data corrupted\n",acc]
 
 -- |Add a user to the database and returns outcome
-addUser :: Pipe -> Text -> ByteString -> Bool -> IO String
+addUser :: Pipe -> Text -> Text -> Bool -> IO String
 addUser p name pswd rootAcc = access p master "raven"
   (find (select ["username" := String name] "users") >>= rest >>=
    (\us -> if null us
      then insert "users" [ "username" := String name
-                         , "password" :=
-                           String (Text.pack (show (hash pswd :: Digest SHA3_512)))
+                         , "password" := String pswd
                          , "rootAccess" := Bool rootAcc
                          ] >>
           return "User created"

@@ -11,11 +11,9 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
 import Control.Monad (forever)
-import Crypto.Hash
 
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
-import qualified Data.Text as Text
 
 import Raven.Server.NodeMsgs
 import Raven.Server.Commands

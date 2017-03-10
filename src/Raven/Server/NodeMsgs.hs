@@ -68,7 +68,7 @@ data AllUsersMsg = AllUsersMsg ByteString
   deriving (Generic,Binary,Typeable)
 
 -- |n,username,passwd,rootaccess
-data AddUserMsg = AddUserMsg ByteString Text ByteString Bool
+data AddUserMsg = AddUserMsg ByteString Text Text Bool
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg
