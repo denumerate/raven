@@ -20,6 +20,7 @@ executable raven
   main-is:             Main.hs
   other-modules:       Raven.REPL
                        Raven.Server
+                       Raven.Server.Commands
                        Raven.Server.NodeMsgs
                        Raven.Server.ServerNode
                        Raven.Server.ConnNode

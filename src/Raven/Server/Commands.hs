@@ -1,0 +1,194 @@
+{-# LANGUAGE OverloadedStrings #-}
+module Raven.Server.Commands
+  ( parseCommand
+  )where
+
+import Control.Distributed.Process
+import Crypto.Hash
+
+import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as B
+import Data.Map (Map)
+import qualified Data.Map as Map
+import qualified Data.Text as Text
+import Data.List (foldl')
+
+import Raven.Server.NodeMsgs
+
+-- |A single command record representing all information.
+-- parseFunc is a function that handles the parsing and needs first
+-- the servers pid then its own pid.
+-- help is a function that sends information on the command, needs its own pid,
+-- and the n value of the message.
+data Cmd = Cmd { parseFunc :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+               , help :: ByteString
+               }
+
+-- |Current command map
+cmdMap :: Map ByteString Cmd
+cmdMap = Map.fromList
+  [ (":kill",Cmd { parseFunc = parseKill
+                 , help = helpKill
+                 })
+  , (":logon",Cmd { parseFunc = parseLogon
+                  , help = helpLogon
+                  })
+  , (":repl?",Cmd { parseFunc = parseReplq
+                  , help = helpReplq
+                  })
+  , (":logout",Cmd { parseFunc = parseLogout
+                   , help = helpLogout
+                   })
+  , (":stopRepl",Cmd { parseFunc = parseStopRepl
+                     , help = helpStopRepl
+                     })
+  , (":allUsers",Cmd { parseFunc = parseAllUsers
+                     , help = helpAllUsers
+                     })
+  , (":help",Cmd { parseFunc = parseHelp cmdMap
+                 , help = helpHelp
+                 })
+  ]
+
+-- |runs commands
+parseCommand :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseCommand server self msg@(n:cmd:_) =
+  case Map.lookup cmd cmdMap of
+    Just Cmd{parseFunc=f} -> f server self msg
+    _ -> send self $ ProcessedMsg n "Command not found"
+parseCommand server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |Parses a kill command
+parseKill :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseKill server self [n,":kill"] = send server (self,KillMsg n)
+parseKill _ self (n:":kill":_) =
+  send self (ProcessedMsg n ":kill takes no arguments")
+parseKill server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |sends information on a kill command
+helpKill :: ByteString
+helpKill =
+  ":kill sends a kill command to the server, shutting it down.\n\
+  \The command accepts no arguments, and requires a logged on user\
+  \with root access."
+
+-- |Parses a logon command
+parseLogon :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseLogon server self [n,":logon",name,pass] =
+  send server (self,LoginMsg n  (Text.pack (B.unpack name))
+                (Text.pack (show (hash pass :: Digest SHA3_512))))
+parseLogon _ self (n:":logon":_) =
+  send self (ProcessedMsg n ":logon takes two arguments (username password)")
+parseLogon server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |Sends information on a logon command
+helpLogon :: ByteString
+helpLogon =
+  ":logon logs a user on to the server.\n\
+  \The command accepts two arguments, username and password."
+
+-- |Parses a repl? command
+parseReplq :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseReplq server self [n,":repl?"] = send server (self,REPLInfoMsg n)
+parseReplq _ self (n:":repl?":_) =
+  send self (ProcessedMsg n ":repl? takes no arguments")
+parseReplq server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |Sends information on a repl? command
+helpReplq :: ByteString
+helpReplq =
+  ":repl? determines if the current user has a repl running.\n\
+  \The command accepts no arguments and requires a logged on user."
+
+-- |parse a logout command
+parseLogout :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseLogout server self [n,":logout"] = send server (self,LogoutMsg n)
+parseLogout _ self (n:":logout":_) =
+  send self (ProcessedMsg n ":logout takes no arguments")
+parseLogout server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |sends information about a logout command
+helpLogout :: ByteString
+helpLogout =
+  ":logout logs the current user out of the sever.\n\
+  \The command accepts no arguments and requires a logged on user."
+
+-- |Parse a stop repl command
+parseStopRepl :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseStopRepl server self [n,":stoprepl"] =
+  send server (self,StopREPLMSG n)
+parseStopRepl _ self (n:":stopRepl":_) =
+  send self (ProcessedMsg n ":stoprepl take no arguments")
+parseStopRepl server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |sends information about a stopRepl command
+helpStopRepl :: ByteString
+helpStopRepl =
+  ":stopRepl checks if the current user has a repl running, and if so,\
+  \stops it.\n\
+  \The command accepts no arguments and requires a logged on user."
+
+-- |parse the allUsers command
+parseAllUsers :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseAllUsers server self [n,":allUsers"] = send server (self,AllUsersMsg n)
+parseAllUsers _ self (n:":allUsers":_) =
+  send self (ProcessedMsg n ":allUsers accepts no arguments")
+parseAllUsers server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |sends information about an allUsers command
+helpAllUsers :: ByteString
+helpAllUsers =
+  ":allUsers returns all users that exist in the server's database\n\
+  \The command accepts no arguments and requires a logged on user with\
+  \root access."
+
+-- |parse the help command
+parseHelp :: Map ByteString Cmd -> ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseHelp cMap _ self [n,":help"] =
+  send self $ ProcessedMsg n $ B.unpack $ foldl' helpConcat B.empty $
+  Map.toList cMap
+  where
+    helpConcat acc (cmd,Cmd{help=help'}) =
+      B.concat [ acc
+               , cmd
+               , ":\n"
+               , help'
+               , "\n"
+               ]
+parseHelp cMap _ self (n:":help":cmds) =
+  send self $ ProcessedMsg n $ B.unpack $ foldl' helpConcat B.empty cmds
+  where
+    helpConcat acc cmd = case Map.lookup cmd cMap of
+      Just Cmd{help=help'} -> B.concat [ acc
+                                       , ":\n"
+                                       , help'
+                                       , "\n"
+                                       ]
+      _ -> B.concat [ acc
+                    , "Command "
+                    , cmd
+                    , " not found\n"]
+parseHelp _ server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |sends information about the help command
+helpHelp :: ByteString
+helpHelp =
+  ":help returns information on existing commands.\n\
+  \The command either takes no arguments and returns information on all commands, \n\
+  \or takes a list of commands and searches for the accompanying information."
