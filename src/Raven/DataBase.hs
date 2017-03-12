@@ -8,6 +8,7 @@ module Raven.DataBase
   , Raven.DataBase.addUser
   , deleteUser
   , updateUsersAccess
+  , updateUsersPassword
   )where
 
 import Database.MongoDB
@@ -104,5 +105,23 @@ updateUsersAccess p name rAcc = access p master "raven"
               , "rootAccess" := Bool rAcc
               ] >>
               return (Just (Text.pack (show id')))
+            _ -> return Nothing
+        _ -> return Nothing))
+
+-- |Change a user's password and return Just if successful
+updateUsersPassword :: Pipe -> Text -> Text -> IO (Maybe ())
+updateUsersPassword p name pswd = access p master "raven"
+  (findOne (select ["username" := String name] "users") >>=
+    (\user -> case user of
+        Just user' ->
+          case (user' !? "_id",user' !? "rootAccess") of
+            (Just id',Just rAcc) ->
+              replace (select [ "_id" := ObjId id'] "users")
+              [ "_id" := ObjId id'
+              , "username" := String name
+              , "password" := String pswd
+              , "rootAccess" := Bool rAcc
+              ] >>
+              return (Just ())
             _ -> return Nothing
         _ -> return Nothing))

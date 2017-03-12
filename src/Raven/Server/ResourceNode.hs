@@ -42,6 +42,7 @@ newResourceNode trans server =
                                  , match (handleAddUser db)
                                  , match (handleDeleteUser db server)
                                  , match (handleChangeRootAccess db server)
+                                 , match (handleChangeUsersPassword db)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -122,6 +123,22 @@ handleChangeRootAccess p server (cPID,ChangeRootAccessMsg n name rAcc) =
     (\out -> case out of
         Just id' -> liftIO (readMVar server) >>=
           (`Control.Distributed.Process.send` (cPID,RootAccessChangedMsg n id' rAcc))
+        _ -> Control.Distributed.Process.send cPID
+          (ProcessedMsg n "User not found"))) >>
+  return ()
+
+-- |Handles a ChangeUsersPasswordMsg by asking the database to find and
+-- update the user.
+-- Tells the connNode the result.
+handleChangeUsersPassword :: DB.Pipe -> (ProcessId, ChangeUsersPasswordMsg) ->
+  Process ()
+handleChangeUsersPassword p (cPID, ChangeUsersPasswordMsg n name pswd) =
+  spawnLocal
+  (liftIO (updateUsersPassword p name pswd) >>=
+    (\out -> case out of
+        Just _ ->
+          Control.Distributed.Process.send cPID $
+             ProcessedMsg n "Password Changed"
         _ -> Control.Distributed.Process.send cPID
           (ProcessedMsg n "User not found"))) >>
   return ()

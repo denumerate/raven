@@ -61,6 +61,9 @@ cmdMap = Map.fromList
   , (":removeAccess",Cmd { parseFunc = parseRemoveAccess
                          , help = helpRemoveAccess
                          })
+  , (":changePassword",Cmd { parseFunc = parseChangePassword
+                           , help = helpChangePassword
+                           })
   ]
 
 -- |runs commands
@@ -295,3 +298,27 @@ helpRemoveAccess =
   ":removeAccess attempts to give a user root access and sends back the result.\n\
   \The command takes one argument (the username) and requires a logged on user with \
   \root access."
+
+-- |parse a changePassword command
+parseChangePassword :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseChangePassword server self [n,":changePassword",name,new] =
+  send server (self,ChangeUsersPasswordMsg n
+                    (Text.pack (B.unpack name))
+                    (Text.pack (show (hash new :: Digest SHA3_512))))
+parseChangePassword _ self [n,":changePassword",_] =
+  send self $ ProcessedMsg n "not implemented yet"
+parseChangePassword _ self (n:":changePassword":_) =
+  send self $ ProcessedMsg n ":changePassword takes one or two arguments"
+parseChangePassword server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |changePassword information
+helpChangePassword :: ByteString
+helpChangePassword =
+  ":changePassword attempts to change a user's password and sends back the result.\n\
+  \The command either takes one or two arguments.\n\
+  \If two, the first is the username, the second the new password,\
+  \if one, the argument is the current users new password.\n\
+  \Changing a different user's password requires a logged on user with root access,\
+  \changing your own password only requires a logged on user."
