@@ -56,6 +56,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                    , match (handleDeleteUser conMap uMap resNode)
                                    , match (handleDeleteUserSucc uMap)
                                    , match (handleChangeRootAccess conMap uMap resNode)
+                                   , match (handleRootAccessChanged uMap)
                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                    ])) >>=
               (\lpid -> liftIO (putMVar serverpid lpid) >>
@@ -332,7 +333,7 @@ handleDeleteUser cMap uMap rNode msg@(cPID,DeleteUserMsg n _) = spawnLocal
     failed = Control.Distributed.Process.send cPID
              (ProcessedMsg n "Please Login")
 
--- |Handles a DeleteUserSucc message by removing the id from the map an then
+-- |Handles a DeleteUserSucc message by removing the id from the map and then
 -- sending a message to the connNode.
 handleDeleteUserSucc :: MVar UserMap -> (ProcessId,DeleteUserSuccMsg) ->
   Process ()
@@ -376,3 +377,21 @@ handleChangeRootAccess cMap uMap rNode msg@(cPID,ChangeRootAccessMsg n _ _) =
   where
     failed = Control.Distributed.Process.send cPID
              (ProcessedMsg n "Please Login")
+
+-- |Handles a RootAccessChangedMsg message by updating the usermap and then
+-- sending a message to the connNode.
+handleRootAccessChanged :: MVar UserMap -> (ProcessId,RootAccessChangedMsg) ->
+  Process ()
+handleRootAccessChanged uMap (cPID,RootAccessChangedMsg n id' rAcc) = spawnLocal
+  (liftIO (takeMVar uMap) >>=
+    (\uMap' -> return (Map.lookup id' uMap') >>=
+      (\user -> case user of
+          Just (_,node) ->
+            Control.Distributed.Process.send cPID
+                (ProcessedMsg n "User information updated") >>
+            liftIO (putMVar uMap (Map.insert id' (rAcc,node) uMap'))
+          _ ->
+            Control.Distributed.Process.send cPID
+                (ProcessedMsg n "User information updated") >>
+            liftIO (putMVar uMap uMap')))) >>
+  return ()

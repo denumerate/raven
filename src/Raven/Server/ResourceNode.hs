@@ -41,6 +41,7 @@ newResourceNode trans server =
                                  , match (handleAllUsers db)
                                  , match (handleAddUser db)
                                  , match (handleDeleteUser db server)
+                                 , match (handleChangeRootAccess db server)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -101,10 +102,26 @@ handleAddUser p (cPID,AddUserMsg n name pswd rAcc) = spawnLocal
 -- If successful, tell the severnode, if not, tells connNode
 handleDeleteUser :: DB.Pipe -> MVar ProcessId -> (ProcessId,DeleteUserMsg) ->
   Process ()
-handleDeleteUser p server (cPID,DeleteUserMsg n name) =
-  liftIO (deleteUser p name) >>=
-  (\out -> case out of
-      Just id' -> liftIO (readMVar server) >>=
-        (`Control.Distributed.Process.send` (cPID,DeleteUserSuccMsg n id'))
-      _ -> Control.Distributed.Process.send cPID
-        (ProcessedMsg n "User not found"))
+handleDeleteUser p server (cPID,DeleteUserMsg n name) = spawnLocal
+  (liftIO (deleteUser p name) >>=
+   (\out -> case out of
+       Just id' -> liftIO (readMVar server) >>=
+         (`Control.Distributed.Process.send` (cPID,DeleteUserSuccMsg n id'))
+       _ -> Control.Distributed.Process.send cPID
+         (ProcessedMsg n "User not found"))) >>
+  return ()
+
+-- |Handles an updateusersaccess message by asking the database to find and
+-- update the user.
+-- If successful, tell the severnode, if not, tells connNode
+handleChangeRootAccess :: DB.Pipe -> MVar ProcessId ->
+  (ProcessId,ChangeRootAccessMsg) -> Process ()
+handleChangeRootAccess p server (cPID,ChangeRootAccessMsg n name rAcc) =
+  spawnLocal
+  (liftIO (updateUsersAccess p name rAcc) >>=
+    (\out -> case out of
+        Just id' -> liftIO (readMVar server) >>=
+          (`Control.Distributed.Process.send` (cPID,RootAccessChangedMsg n id' rAcc))
+        _ -> Control.Distributed.Process.send cPID
+          (ProcessedMsg n "User not found"))) >>
+  return ()

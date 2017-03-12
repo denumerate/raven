@@ -101,7 +101,7 @@ updateUsersAccess p name rAcc = access p master "raven"
               [ "_id" := ObjId i
               , "username" := String name
               , "password" := String pswd
-              , "rootAcces" := Bool rAcc
+              , "rootAccess" := Bool rAcc
               ] >>
               return (Just (Text.pack (show id')))
             _ -> return Nothing

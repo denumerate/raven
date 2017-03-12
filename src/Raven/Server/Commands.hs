@@ -282,7 +282,7 @@ parseRemoveAccess :: ProcessId -> ProcessId -> [ByteString] -> Process ()
 parseRemoveAccess _ self [n,":removeAccess","root"] =
   send self $ ProcessedMsg n "root cannot loose root access"
 parseRemoveAccess server self [n,":removeAccess",usr] =
-  send server (self,ChangeRootAccessMsg n (Text.pack (B.unpack usr)) True)
+  send server (self,ChangeRootAccessMsg n (Text.pack (B.unpack usr)) False)
 parseRemoveAccess _ self (n:":removeAccess":_) =
   send self $ ProcessedMsg n ":removeAccess takes one argument"
 parseRemoveAccess server _ _ =
