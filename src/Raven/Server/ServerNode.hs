@@ -55,6 +55,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                    , match (handleAddUser conMap uMap resNode)
                                    , match (handleDeleteUser conMap uMap resNode)
                                    , match (handleDeleteUserSucc uMap)
+                                   , match (handleChangeRootAccess conMap uMap resNode)
                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                    ])) >>=
               (\lpid -> liftIO (putMVar serverpid lpid) >>
@@ -350,3 +351,28 @@ handleDeleteUserSucc uMap (cPID,DeleteUserSuccMsg n id') = spawnLocal
             Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
             liftIO (putMVar uMap uMap')))) >>
   return ()
+
+-- |Handles an changeRootAccessMsg by checking user permissions and then passing
+-- the message on if allowed.
+handleChangeRootAccess :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
+  (ProcessId,ChangeRootAccessMsg) -> Process ()
+handleChangeRootAccess cMap uMap rNode msg@(cPID,ChangeRootAccessMsg n _ _) =
+  spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\cMap' -> case cMap' of
+       Just uid ->
+         liftIO (readMVar uMap) >>=
+         return . Map.lookup uid >>=
+         (\user -> case user of
+             Just (True,_) ->
+               liftIO (readMVar rNode) >>=
+               (`Control.Distributed.Process.send` msg)
+             Just (False,_) -> Control.Distributed.Process.send cPID
+                                (ProcessedMsg n "You do not have root access")
+             _ -> failed)
+       _ -> failed)) >>
+  return ()
+  where
+    failed = Control.Distributed.Process.send cPID
+             (ProcessedMsg n "Please Login")

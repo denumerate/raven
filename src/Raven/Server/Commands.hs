@@ -55,6 +55,12 @@ cmdMap = Map.fromList
   , (":deleteUser",Cmd { parseFunc = parseDeleteUser
                        , help = helpDeleteUser
                        })
+  , (":grantAccess",Cmd { parseFunc = parseGrantAccess
+                        , help = helpGrantAccess
+                        })
+  , (":removeAccess",Cmd { parseFunc = parseRemoveAccess
+                         , help = helpRemoveAccess
+                         })
   ]
 
 -- |runs commands
@@ -249,5 +255,43 @@ parseDeleteUser server _ _ =
 helpDeleteUser :: ByteString
 helpDeleteUser =
   ":deleteUser attempts to remove a user from the server and sends back the result.\n\
+  \The command takes one argument (the username) and requires a logged on user with \
+  \root access."
+
+-- |parse a grantAccess command
+parseGrantAccess :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseGrantAccess _ self [n,":grantAccess","root"] =
+  send self $ ProcessedMsg n "root has access by default"
+parseGrantAccess server self [n,":grantAccess",usr] =
+  send server (self,ChangeRootAccessMsg n (Text.pack (B.unpack usr)) True)
+parseGrantAccess _ self (n:":grantAccess":_) =
+  send self $ ProcessedMsg n ":grantAccess takes one argument"
+parseGrantAccess server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |grantAccess information
+helpGrantAccess :: ByteString
+helpGrantAccess =
+  ":grantAccess attempts to give a user root access and sends back the result.\n\
+  \The command takes one argument (the username) and requires a logged on user with \
+  \root access."
+
+-- |parse a removeAccess command
+parseRemoveAccess :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseRemoveAccess _ self [n,":removeAccess","root"] =
+  send self $ ProcessedMsg n "root cannot loose root access"
+parseRemoveAccess server self [n,":removeAccess",usr] =
+  send server (self,ChangeRootAccessMsg n (Text.pack (B.unpack usr)) True)
+parseRemoveAccess _ self (n:":removeAccess":_) =
+  send self $ ProcessedMsg n ":removeAccess takes one argument"
+parseRemoveAccess server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |grantAccess information
+helpRemoveAccess :: ByteString
+helpRemoveAccess =
+  ":removeAccess attempts to give a user root access and sends back the result.\n\
   \The command takes one argument (the username) and requires a logged on user with \
   \root access."

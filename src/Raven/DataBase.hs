@@ -7,6 +7,7 @@ module Raven.DataBase
   , getAllUsers
   , Raven.DataBase.addUser
   , deleteUser
+  , updateUsersAccess
   )where
 
 import Database.MongoDB
@@ -81,9 +82,27 @@ addUser p name pswd rootAcc = access p master "raven"
 deleteUser :: Pipe -> Text -> IO (Maybe Text)
 deleteUser p name = access p master "raven"
   (findOne (select ["username" := String name] "users") >>=
-   (\user -> case user of
-       Just user' -> delete (select ["username" := String name] "users") >>
-         case user' !? "_id" of
-           Just (Oid _ id') -> return $ Just $ Text.pack $ show id'
-           _ -> return Nothing
-       _ -> return Nothing))
+    (\user -> case user of
+        Just user' -> delete (select ["username" := String name] "users") >>
+          case user' !? "_id" of
+            Just (Oid _ id') -> return $ Just $ Text.pack $ show id'
+            _ -> return Nothing
+        _ -> return Nothing))
+
+-- |Change a user's root access and return the id if successful
+updateUsersAccess :: Pipe -> Text -> Bool -> IO (Maybe Text)
+updateUsersAccess p name rAcc = access p master "raven"
+  (findOne (select ["username" := String name] "users") >>=
+    (\user -> case user of
+        Just user' ->
+          case (user' !? "_id",user' !? "password") of
+            (Just i@(Oid _ id'),Just pswd) ->
+              replace (select [ "_id" := ObjId i] "users")
+              [ "_id" := ObjId i
+              , "username" := String name
+              , "password" := String pswd
+              , "rootAcces" := Bool rAcc
+              ] >>
+              return (Just (Text.pack (show id')))
+            _ -> return Nothing
+        _ -> return Nothing))
