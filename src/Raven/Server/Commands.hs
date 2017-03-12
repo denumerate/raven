@@ -305,8 +305,9 @@ parseChangePassword server self [n,":changePassword",name,new] =
   send server (self,ChangeUsersPasswordMsg n
                     (Text.pack (B.unpack name))
                     (Text.pack (show (hash new :: Digest SHA3_512))))
-parseChangePassword _ self [n,":changePassword",_] =
-  send self $ ProcessedMsg n "not implemented yet"
+parseChangePassword server self [n,":changePassword",new] =
+  send server (self,ChangeCurrentPasswordMsg n Text.empty
+                    (Text.pack (show (hash new :: Digest SHA3_512))))
 parseChangePassword _ self (n:":changePassword":_) =
   send self $ ProcessedMsg n ":changePassword takes one or two arguments"
 parseChangePassword server _ _ =

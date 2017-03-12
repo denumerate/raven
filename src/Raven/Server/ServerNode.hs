@@ -58,6 +58,7 @@ newServerNode trans end = newLocalNode trans initRemoteTable >>=
                                    , match (handleChangeRootAccess conMap uMap resNode)
                                    , match (handleRootAccessChanged uMap)
                                    , match (handleChangeUsersPassword conMap uMap resNode)
+                                   , match (handleChangeCurrentPassword conMap resNode)
                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
                                    ])) >>=
               (\lpid -> liftIO (putMVar serverpid lpid) >>
@@ -397,7 +398,7 @@ handleRootAccessChanged uMap (cPID,RootAccessChangedMsg n id' rAcc) = spawnLocal
             liftIO (putMVar uMap uMap')))) >>
   return ()
 
--- |Handles an ChangeUsersPasswordMsg by checking user permissions and then passing
+-- |Handles a ChangeUsersPasswordMsg by checking user permissions and then passing
 -- the message on if allowed.
 handleChangeUsersPassword :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
   (ProcessId,ChangeUsersPasswordMsg) -> Process ()
@@ -416,6 +417,24 @@ handleChangeUsersPassword cMap uMap rNode msg@(cPID,ChangeUsersPasswordMsg n _ _
              Just (False,_) -> Control.Distributed.Process.send cPID
                                 (ProcessedMsg n "You do not have root access")
              _ -> failed)
+       _ -> failed)) >>
+  return ()
+  where
+    failed = Control.Distributed.Process.send cPID
+             (ProcessedMsg n "Please Login")
+
+-- |Handles a ChangeCurrentPasswordMsg by looking up the user's id and then passing
+-- on the message.
+handleChangeCurrentPassword :: MVar ConnMap -> ResourceNode ->
+  (ProcessId,ChangeCurrentPasswordMsg) -> Process ()
+handleChangeCurrentPassword cMap rNode (cPID,ChangeCurrentPasswordMsg n _ new) =
+  spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\uid -> case uid of
+       Just uid' -> liftIO (readMVar rNode) >>=
+            (`Control.Distributed.Process.send`
+              (cPID,ChangeCurrentPasswordMsg n uid' new))
        _ -> failed)) >>
   return ()
   where
