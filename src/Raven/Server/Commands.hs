@@ -305,11 +305,8 @@ parseChangePassword server self [n,":changePassword",name,new] =
   send server (self,ChangeUsersPasswordMsg n
                     (Text.pack (B.unpack name))
                     (Text.pack (show (hash new :: Digest SHA3_512))))
-parseChangePassword server self [n,":changePassword",new] =
-  send server (self,ChangeCurrentPasswordMsg n Text.empty
-                    (Text.pack (show (hash new :: Digest SHA3_512))))
 parseChangePassword _ self (n:":changePassword":_) =
-  send self $ ProcessedMsg n ":changePassword takes one or two arguments"
+  send self $ ProcessedMsg n ":changePassword takes two arguments"
 parseChangePassword server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -318,8 +315,6 @@ parseChangePassword server _ _ =
 helpChangePassword :: ByteString
 helpChangePassword =
   ":changePassword attempts to change a user's password and sends back the result.\n\
-  \The command either takes one or two arguments.\n\
-  \If two, the first is the username, the second the new password,\
-  \if one, the argument is the current users new password.\n\
-  \Changing a different user's password requires a logged on user with root access,\
-  \changing your own password only requires a logged on user."
+  \The command takes two arguments, \n\
+  \the first is the username, the second the new password,\
+  \Changing a user's password requires a logged on user with root access."

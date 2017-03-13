@@ -126,22 +126,3 @@ updateUsersPassword p name pswd = access p master "raven"
               return (Just ())
             _ -> return Nothing
         _ -> return Nothing))
-
--- |Change a user's password and return Just if successful (use id)
-updateUsersPassword' :: Pipe -> ObjectId -> Text -> IO (Maybe ())
-updateUsersPassword' p id' pswd = access p master "raven"
-  (findOne (select ["_id" := ObjId id'] "users") >>=
-    (\user -> case user of
-        Just user' ->
-          case (user' !? "username",user' !? "rootAccess") of
-            (Just name,Just rAcc) ->
-              replace (select [ "_id" := ObjId id'] "users")
-              [ "_id" := ObjId id'
-              , "username" := String name
-              , "password" := String pswd
-              , "rootAccess" := Bool rAcc
-              ] >>
-              return (Just ())
-            _ -> return Nothing
-        _ -> return Nothing))
-

@@ -57,7 +57,7 @@ data LoginMsg = LoginMsg ByteString Text Text
 data LoginSucMsg = LoginSucMsg (Text,Bool)
  deriving (Generic,Binary,Typeable)
 
--- |NewTokenMsg holds: (Token, id)
+-- |NewTnameokenMsg holds: (Token, id)
 data NewTokenMsg = NewTokenMsg (Text,Text)
   deriving (Generic,Binary,Typeable)
 
