@@ -20,6 +20,8 @@ data Options = Options
   , help :: Bool
   , version :: Bool
   , ip :: String
+  , dbip :: String
+  , dbport :: Maybe String
   }
 
 main :: IO ()
@@ -34,20 +36,25 @@ main = getIp >>=
                       (_,_,True,Just address) ->
                         forkIO (initClient ip clientPort
                                 (EndPointAddress (B.pack address))) >>
-                        initServer ip serverPort
+                        initServer ip serverPort (buildDBString dbip dbport)
                       (_,_,_,Just address) -> initClient ip clientPort
                                    (EndPointAddress (B.pack address))
-                      _ -> initServer "127.0.0.1" serverPort)
+                      _ -> initServer "127.0.0.1" serverPort
+                                   (buildDBString dbip dbport))
                 (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))))
   where
     header = "Usage raven [OPTION..]"
-    ver = "0.1.7"
+    ver = "0.1.8"
 
 getIp :: IO String
 getIp = getNetworkInterfaces >>=
   return . map (show . ipv4) >>=
   return . filter (\ip -> ip /= "0.0.0.0" && ip /= "127.0.0.1") >>=
   (\ips -> if null ips then return "127.0.0.1" else return (head ips))
+
+buildDBString :: String -> Maybe String -> String
+buildDBString ip (Just port) = ip ++ ":" ++ port
+buildDBString ip _ = ip
 
 startOptions :: String -> Options
 startOptions address = Options
@@ -58,6 +65,8 @@ startOptions address = Options
   , help = False
   , version = False
   , ip = address
+  , dbip = "127.0.0.1"
+  , dbport = Nothing
   }
 
 options :: [OptDescr (Options -> IO Options)]
@@ -99,4 +108,18 @@ options =
                (return (Just ("127.0.0.1:" ++ serverPort ++ ":0")))
              }))
     "Sets the ip to localhost"
+  , Option "I" ["database ip address"]
+    (ReqArg (\arg opt@Options{..} ->
+               return opt
+               { dbip = arg
+               })
+     "Database IP Address")
+    "Sets the database's ip address (default is 127.0.0.1)"
+  , Option "P" ["database port number"]
+    (ReqArg (\arg opt@Options{..} ->
+               return opt
+               { dbport = Just arg
+               })
+     "Database Port Number")
+    "Set the database port number, default is the mongoDB default"
   ]

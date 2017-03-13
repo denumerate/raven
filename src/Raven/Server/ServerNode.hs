@@ -29,13 +29,13 @@ type UserMap = Map Text (Bool,Maybe REPLNode)
 connTimeout = 1800000000
 
 -- |Builds a server node and all internal processes
-newServerNode :: Transport -> EndPoint -> IO ()
-newServerNode trans end = newLocalNode trans initRemoteTable >>=
+newServerNode :: Transport -> EndPoint -> String -> IO ()
+newServerNode trans end db = newLocalNode trans initRemoteTable >>=
   (\node -> putStrLn ("Server established at " ++ (show . address) end) >>
   newEmptyMVar >>=
     (\serverpid -> newMVar Map.empty >>=
       (\conMap -> newMVar Map.empty >>=
-        (\uMap -> newResourceNode trans serverpid >>=
+        (\uMap -> newResourceNode trans serverpid db >>=
           (\resNode -> runProcess node
             (liftIO (readMVar resNode) >>=
               (\resNode' ->

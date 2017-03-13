@@ -21,15 +21,15 @@ import Raven.DataBase
 type ResourceNode = MVar ProcessId
 
 -- |Builds and returns the node.
--- Needs the transport layer and Maybe a logging level (Standard is default)
-newResourceNode :: Transport -> MVar ProcessId -> IO ResourceNode
-newResourceNode trans server =
+-- Needs the transport layer, server address, and database address.
+newResourceNode :: Transport -> MVar ProcessId -> String -> IO ResourceNode
+newResourceNode trans server dbAddr =
   getHomeDirectory >>=
   setCurrentDirectory >>
   createDirectoryIfMissing False ".raven" >>
   openFile ".raven/log" AppendMode >>=
   (\logH -> hSetBuffering logH (BlockBuffering Nothing) >>
-  DB.connect (DB.host "127.0.0.1") >>=
+  DB.connect (DB.readHostPort dbAddr) >>=
     (\db -> forkIO (ensureUsers db) >>
       newLocalNode trans initRemoteTable >>=
       (\node -> newEmptyMVar >>=

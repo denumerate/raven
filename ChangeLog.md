@@ -1,6 +1,21 @@
 # Revision history for raven
 
 
+## 0.1.8 -- 17-3-12
+
+* The resource node now connects to a mongo database and uses that database
+to store user information.
+
+* Users now have their own REPL nodes.
+
+* A default user exists in new databases called root, with a default password
+of entry.
+
+* Some actions require 'rootAccess'.
+
+* A :help command lists all existing commands and accompanying information.
+
+
 ## 0.1.7 -- 17-02-28
 
 * Basic and conditional probability added, the first distribution functions
