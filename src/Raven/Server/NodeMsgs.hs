@@ -95,10 +95,6 @@ data RootAccessChangedMsg = RootAccessChangedMsg ByteString Text Bool
 data ChangeUsersPasswordMsg = ChangeUsersPasswordMsg ByteString Text Text
   deriving (Generic,Binary,Typeable)
 
--- |n id newPassword
-data ChangeCurrentPasswordMsg = ChangeCurrentPasswordMsg ByteString Text Text
-  deriving (Generic,Binary,Typeable)
-
 -- |Standardized LogMsg
 buildLogMsg :: String -> Process LogMsg
 buildLogMsg msg = getSelfPid >>=
