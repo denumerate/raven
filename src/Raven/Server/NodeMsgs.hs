@@ -20,7 +20,6 @@ module Raven.Server.NodeMsgs
   , ChangeRootAccessMsg(..)
   , RootAccessChangedMsg(..)
   , ChangeUsersPasswordMsg(..)
-  , ChangeCurrentPasswordMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'

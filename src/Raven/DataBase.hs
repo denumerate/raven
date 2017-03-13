@@ -9,7 +9,6 @@ module Raven.DataBase
   , deleteUser
   , updateUsersAccess
   , updateUsersPassword
-  , updateUsersPassword'
   )where
 
 import Database.MongoDB
