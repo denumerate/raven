@@ -9,7 +9,7 @@ pipelines:
   default:
     - step:
         script: # Modify the commands below to build your repository.
-          - apt-get update && apt-get install -y xz-utils make libghc-gtk-dev
+          - apt-get update && apt-get install -y xz-utils make libghc-gtk-dev libgtk-3-0
           - stack setup --upgrade-cabal
           - stack install gtk2hs-buildtools
           - stack test
