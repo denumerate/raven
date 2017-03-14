@@ -4,24 +4,38 @@ module Raven.Client.GUI
 
 import Network.Transport
 
-import Control.Monad
 import Control.Monad.IO.Class
-import Data.IORef
+import Control.Monad
 import Graphics.UI.Gtk hiding (Action, backspace)
-import System.Glib.UTFString
 
 -- |Builds and runs ui
 guiMain :: Connection -> EndPoint -> EndPointAddress -> IO ()
 guiMain conn end server = void initGUI >>
   windowNew >>=
   (\w ->
-     set w windowSettings >>
-     windowFullscreen w >>
+     windowSettings w >>
+     buildConnInfo server >>=
+     containerAdd w >>
      widgetShowAll w) >>
   mainGUI
 
 -- |window settings
-windowSettings :: (WindowClass o) => [AttrOp o]
-windowSettings =
-  [ windowTitle := "raven"
-  ]
+windowSettings :: Window -> IO ()
+windowSettings w =
+  set w [ windowTitle := "raven"
+        ]>>
+  windowFullscreen w >>
+  on w deleteEvent (liftIO mainQuit >> return False) >>
+  return ()
+
+buildConnInfo :: EndPointAddress -> IO TextView
+buildConnInfo server =
+  textBufferNew Nothing >>=
+  (\tbuf ->
+     textBufferSetText tbuf ("Connection Established: " ++ (show server)) >>
+     textViewNewWithBuffer tbuf >>=
+     (\tview ->
+        set tview [ textViewCursorVisible := False
+                  , textViewEditable := False
+                  ] >>
+        return tview))
