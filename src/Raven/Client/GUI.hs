@@ -77,4 +77,7 @@ inOuts =
         (\i -> boxPackStart hbox i PackGrow 2 >>
                textViewSetCursorVisible i True >>
                textViewSetWrapMode i WrapWordChar >>
+               on i keyPressEvent next >>
                return hbox))
+    next = eventKeyVal >>=
+      liftIO . print >> return False
