@@ -77,7 +77,16 @@ inOuts =
         (\i -> boxPackStart hbox i PackGrow 2 >>
                textViewSetCursorVisible i True >>
                textViewSetWrapMode i WrapWordChar >>
-               on i keyPressEvent next >>
+               newMVar 0 >>=
+               on i keyPressEvent . next >>
                return hbox))
-    next = eventKeyVal >>=
-      liftIO . print >> return False
+    next lastKey = eventKeyVal >>=
+      (\key -> liftIO (takeMVar lastKey) >>=
+        (\lastKey' -> case (key,lastKey') of
+            (65505,65293) -> liftIO (putStrLn "^ return") >>
+                             liftIO (putMVar lastKey 0) >>
+                             return False
+            (_,65505) -> liftIO (putMVar lastKey 65505) >>
+                         return True
+            (_,newKey) -> liftIO (putMVar lastKey newKey) >>
+                          return True))
