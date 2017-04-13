@@ -32,4 +32,4 @@ listenAtEnd end connbuf =
 -- Needs the connection, the line number, and the message
 sendReq :: Connection -> Int -> ByteString -> IO ()
 sendReq conn n val = send conn [B.pack $ show n,B.pack " ",val] >> --error possible
-  return ()
+  return () >> putStrLn "sent"

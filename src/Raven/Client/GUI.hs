@@ -22,7 +22,7 @@ guiMain conn end server = void initGUI >>
         vBoxNew False 2 >>=
         (\vbox ->
            boxPackStart vbox connL PackNatural 2 >>
-           buildWork >>=
+           buildWork conn >>=
            (\ws -> boxPackEnd vbox ws PackGrow 2) >>
            containerAdd w vbox)) >>
      widgetShowAll w) >>
@@ -54,19 +54,19 @@ buildConnInfo end server =
         return tview))
 
 -- |Creates the widget that allows for work
-buildWork :: IO HBox
-buildWork =
+buildWork :: Connection -> IO HBox
+buildWork conn =
   hBoxNew False 2 >>=
   (\vbox ->
      vScrollbarNewDefaults >>=
      (\s -> boxPackEnd vbox s PackNatural 2 >>
-            inOuts >>=
+            inOuts conn >>=
             (\ios -> boxPackStart vbox ios PackGrow 2)) >>
      return vbox)
 
 -- |creates input output areas
-inOuts :: IO HBox
-inOuts =
+inOuts :: Connection -> IO HBox
+inOuts conn =
   hBoxNew False 2 >>=
   (\hbox -> inOut >>=
     (\io -> boxPackStart hbox io PackGrow 2 >>
@@ -77,13 +77,20 @@ inOuts =
         (\i -> boxPackStart hbox i PackGrow 2 >>
                textViewSetCursorVisible i True >>
                textViewSetWrapMode i WrapWordChar >>
-               newMVar 0 >>=
-               on i keyPressEvent . next >>
+               textViewGetBuffer i >>=
+               (\buf -> newMVar 0 >>=
+                        on i keyPressEvent . next buf) >>
                return hbox))
-    next lastKey = eventKeyVal >>=
+    next buf lastKey = eventKeyVal >>=
       (\key -> liftIO (takeMVar lastKey) >>=
         (\lastKey' -> case (key,lastKey') of
-            (65505,65293) -> liftIO (putStrLn "^ return") >>
+            (65505,65293) -> liftIO (textBufferGetStartIter buf) >>=
+                             (\srt ->
+                                liftIO (textBufferGetEndIter buf) >>=
+                                (\end ->
+                                   liftIO (textBufferGetByteString buf
+                                           srt end False))) >>=
+                             liftIO . sendReq conn 0 >>
                              liftIO (putMVar lastKey 0)
             (newKey,_) -> liftIO (putMVar lastKey newKey))) >>
       return False
