@@ -65,32 +65,29 @@ buildWork conn =
      return vbox)
 
 -- |creates input output areas
-inOuts :: Connection -> IO HBox
-inOuts conn =
-  hBoxNew False 2 >>=
-  (\hbox -> inOut >>=
-    (\io -> boxPackStart hbox io PackGrow 2 >>
-            return hbox))
+inOuts :: Connection -> IO TextView
+inOuts conn = textViewNew >>=
+  (\i -> textViewSetCursorVisible i True >>
+         textViewSetWrapMode i WrapWordChar >>
+         textViewGetBuffer i >>=
+         (\buf -> newMVar 0 >>=
+                  on i keyPressEvent . next buf) >>
+         return i)
   where
-    inOut = hBoxNew False 2 >>=
-      (\hbox -> textViewNew >>=
-        (\i -> boxPackStart hbox i PackGrow 2 >>
-               textViewSetCursorVisible i True >>
-               textViewSetWrapMode i WrapWordChar >>
-               textViewGetBuffer i >>=
-               (\buf -> newMVar 0 >>=
-                        on i keyPressEvent . next buf) >>
-               return hbox))
     next buf lastKey = eventKeyVal >>=
       (\key -> liftIO (takeMVar lastKey) >>=
         (\lastKey' -> case (key,lastKey') of
-            (65505,65293) -> liftIO (textBufferGetStartIter buf) >>=
-                             (\srt ->
-                                liftIO (textBufferGetEndIter buf) >>=
-                                (\end ->
-                                   liftIO (textBufferGetByteString buf
-                                           srt end False))) >>=
-                             liftIO . sendReq conn 0 >>
+            (65505,65293) -> handleShiftRet buf >>
+                             liftIO (putMVar lastKey 0)
+            (65505,65505) -> handleShiftRet buf >>
                              liftIO (putMVar lastKey 0)
             (newKey,_) -> liftIO (putMVar lastKey newKey))) >>
       return False
+    handleShiftRet buf = liftIO (textBufferGetStartIter buf) >>=
+      (\srt ->
+          liftIO (textBufferGetEndIter buf) >>=
+          (\end ->
+              liftIO (textBufferGetByteString buf
+                       srt end False))) >>=
+      (\val -> (liftIO . sendReq conn 0) val >>
+               liftIO (print val))
