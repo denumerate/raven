@@ -23,4 +23,12 @@ errorString e = show e
 -- |initializes the repl
 initREPL :: Interpreter ()
 initREPL = setImportsQ
-  [ ("Prelude", Nothing)]
+  [ ("Prelude", Nothing)
+  , ("Raven.Data.Stat", Nothing)
+  , ("Raven.Data.Prob", Nothing)
+  , ("Raven.Data.Prob.DistributionFuncs", Nothing)
+  , ("Raven.Data.Entry", Nothing)
+  , ("Raven.Data.BasicEntry", Nothing)
+  , ("Raven.Data.BasicUnboundEntry", Nothing)
+  , ("Raven.Data.Table", Nothing)
+  ]
