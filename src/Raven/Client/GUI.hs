@@ -9,6 +9,8 @@ import Control.Monad.IO.Class
 import Control.Monad
 import Graphics.UI.Gtk hiding (Action, backspace)
 
+import Data.ByteString.Char8 (ByteString)
+
 import Raven.Client.Connection
 
 -- |Builds and runs ui
@@ -17,14 +19,15 @@ guiMain conn end server = void initGUI >>
   windowNew >>=
   (\w ->
      windowSettings conn w >>
-     buildConnInfo end server >>=
-     (\connL ->
-        vBoxNew False 2 >>=
-        (\vbox ->
-           boxPackStart vbox connL PackNatural 2 >>
-           buildWork conn >>=
-           (\ws -> boxPackEnd vbox ws PackGrow 2) >>
-           containerAdd w vbox)) >>
+     textBufferNew Nothing >>=
+     (\buf -> buildConnInfo end server buf >>=
+       (\connL ->
+          vBoxNew False 2 >>=
+         (\vbox ->
+            boxPackStart vbox connL PackNatural 2 >>
+            buildWork conn buf >>=
+            (\ws -> boxPackEnd vbox ws PackGrow 2) >>
+            containerAdd w vbox))) >>
      widgetShowAll w) >>
   mainGUI
 
@@ -40,11 +43,11 @@ windowSettings conn w =
   return ()
 
 -- |Creates label that displays connection info and starts up the listening process
-buildConnInfo :: EndPoint -> EndPointAddress -> IO TextView
-buildConnInfo end server =
+buildConnInfo :: EndPoint -> EndPointAddress -> TextBuffer -> IO TextView
+buildConnInfo end server buf =
   textBufferNew Nothing >>=
   (\tbuf ->
-     forkIO (listenAtEnd end tbuf) >>
+     forkIO (listenAtEnd end tbuf buf) >>
      textBufferSetText tbuf ("Connection Established: " ++ (show server)) >>
      textViewNewWithBuffer tbuf >>=
      (\tview ->
@@ -54,40 +57,39 @@ buildConnInfo end server =
         return tview))
 
 -- |Creates the widget that allows for work
-buildWork :: Connection -> IO HBox
-buildWork conn =
+buildWork :: Connection -> TextBuffer -> IO HBox
+buildWork conn buf =
   hBoxNew False 2 >>=
   (\vbox ->
      vScrollbarNewDefaults >>=
      (\s -> boxPackEnd vbox s PackNatural 2 >>
-            inOuts conn >>=
+            inOuts conn buf >>=
             (\ios -> boxPackStart vbox ios PackGrow 2)) >>
      return vbox)
 
 -- |creates input output areas
-inOuts :: Connection -> IO TextView
-inOuts conn = textViewNew >>=
+inOuts :: Connection -> TextBuffer -> IO TextView
+inOuts conn buf = textViewNewWithBuffer buf >>=
   (\i -> textViewSetCursorVisible i True >>
          textViewSetWrapMode i WrapWordChar >>
-         textViewGetBuffer i >>=
-         (\buf -> newMVar 0 >>=
-                  on i keyPressEvent . next buf) >>
+         newMVar 0 >>=
+         on i keyPressEvent . next >>
          return i)
   where
-    next buf lastKey = eventKeyVal >>=
+    next lastKey = eventKeyVal >>=
       (\key -> liftIO (takeMVar lastKey) >>=
         (\lastKey' -> case (key,lastKey') of
-            (65505,65293) -> handleShiftRet buf >>
+            (65293,65505) -> handleShiftRet >>
                              liftIO (putMVar lastKey 0)
-            (65505,65505) -> handleShiftRet buf >>
+            (65293,65506) -> handleShiftRet >>
                              liftIO (putMVar lastKey 0)
             (newKey,_) -> liftIO (putMVar lastKey newKey))) >>
       return False
-    handleShiftRet buf = liftIO (textBufferGetStartIter buf) >>=
-      (\srt ->
-          liftIO (textBufferGetEndIter buf) >>=
-          (\end ->
-              liftIO (textBufferGetByteString buf
-                       srt end False))) >>=
-      (\val -> (liftIO . sendReq conn 0) val >>
-               liftIO (print val))
+    handleShiftRet = liftIO (parseBuf buf) >>=
+      liftIO . sendReq conn 0
+
+-- |Get the last entry in the buffer
+parseBuf :: TextBuffer -> IO ByteString
+parseBuf buf = textBufferGetStartIter buf >>=
+  (\start -> textBufferGetEndIter buf >>=
+    (\end -> textBufferGetByteString buf start end False))

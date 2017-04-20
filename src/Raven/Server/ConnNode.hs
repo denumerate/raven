@@ -46,6 +46,7 @@ sendResult conn (ProcessedMsg n msg) =
 -- |Handles the data send by a received event
 -- needs the servers process id
 handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
+handleReceived _ [_] _ = return ()
 handleReceived pid cmd@(n:msg) (connNode,self) = readMVar self >>=
   (\self' -> if B.isPrefixOf ":" (head msg)
     then runProcess connNode (parseCommand pid self' cmd)
