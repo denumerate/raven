@@ -10,5 +10,5 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
           - apt-get update && apt-get install -y xz-utils make libghc-gtk-dev
-          - stack setup
+          - stack setup --upgrade-cabal
           - stack test
