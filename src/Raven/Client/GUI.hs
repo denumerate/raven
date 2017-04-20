@@ -10,6 +10,7 @@ import Control.Monad
 import Graphics.UI.Gtk hiding (Action, backspace)
 
 import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as B
 
 import Raven.Client.Connection
 
@@ -92,4 +93,5 @@ inOuts conn buf = textViewNewWithBuffer buf >>=
 parseBuf :: TextBuffer -> IO ByteString
 parseBuf buf = textBufferGetStartIter buf >>=
   (\start -> textBufferGetEndIter buf >>=
-    (\end -> textBufferGetByteString buf start end False))
+    (\end -> textBufferGetByteString buf start end False)) >>=
+  return . last . B.split '\n'
