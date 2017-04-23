@@ -46,6 +46,7 @@ newServerNode trans end db = newLocalNode trans initRemoteTable >>=
                                    , match (handlePlot trans conMap uMap serverpid)
                                    , match (handleLog resNode)
                                    , match (handleLogin resNode)
+                                   , match (handlePlotDone resNode)
                                    , match (handleLoginSuc conMap uMap)
                                    , match (handleLogout conMap)
                                    , match (handleKill conMap uMap
@@ -223,6 +224,11 @@ handleLog rNode msg = liftIO (readMVar rNode) >>=
 -- |Handles a Login message by passing it on to the resource node.
 handleLogin :: ResourceNode -> (ProcessId,LoginMsg) -> Process ()
 handleLogin rNode msg = liftIO (readMVar rNode) >>=
+  (`Control.Distributed.Process.send` msg)
+
+-- |Handles a PlotDone message by passing it on to the resource node.
+handlePlotDone :: ResourceNode -> (ProcessId,PlotDoneMsg) -> Process ()
+handlePlotDone rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
 
 -- |Handles a successful login message by linking the connection to the user,

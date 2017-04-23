@@ -13,6 +13,9 @@ import qualified Database.MongoDB as DB
 
 import System.IO
 import System.Directory
+import Codec.Picture
+
+import qualified Data.ByteString.Lazy as B
 
 import Raven.Server.NodeMsgs
 import Raven.DataBase
@@ -43,6 +46,7 @@ newResourceNode trans server dbAddr =
                                  , match (handleDeleteUser db server)
                                  , match (handleChangeRootAccess db server)
                                  , match (handleChangeUsersPassword db)
+                                 , match handlePlotDone
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -141,4 +145,29 @@ handleChangeUsersPassword p (cPID, ChangeUsersPasswordMsg n name pswd) =
              ProcessedMsg n "Password Changed"
         _ -> Control.Distributed.Process.send cPID
           (ProcessedMsg n "User not found"))) >>
+  return ()
+
+-- |Handles a PlotDoneMsg by sending a serialized version of the image to the user
+-- and then removing the file
+handlePlotDone :: (ProcessId,PlotDoneMsg) -> Process ()
+handlePlotDone (cPID,PlotDoneMsg n fname) =
+  let fname' = ".raven/plots/" ++ fname
+  in spawnLocal
+     (liftIO (doesFileExist fname') >>=
+       (\exists -> if exists
+                   then liftIO (readImage fname') >>=
+                        (\img -> case img of
+                            Left str ->
+                               Control.Distributed.Process.send cPID
+                                 (ProcessedMsg n str)
+                            Right img' -> case encodeDynamicBitmap img' of
+                              Left str ->
+                                Control.Distributed.Process.send cPID
+                                 (ProcessedMsg n str)
+                              Right bstring ->
+                                Control.Distributed.Process.send cPID
+                                 (ProcessedBSMsg n (B.toStrict bstring))) >>
+                        liftIO (removeFile fname')
+                   else Control.Distributed.Process.send cPID
+                        (ProcessedMsg n "File error"))) >>
   return ()

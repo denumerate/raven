@@ -21,6 +21,7 @@ module Raven.Server.NodeMsgs
   , RootAccessChangedMsg(..)
   , ChangeUsersPasswordMsg(..)
   , PlotMsg(..)
+  , PlotDoneMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
@@ -40,6 +41,7 @@ data REPLMsg = REPLMsg ByteString String
   deriving (Generic,Binary,Typeable)
 
 data ProcessedMsg = ProcessedMsg ByteString String
+                  | ProcessedBSMsg ByteString ByteString
   deriving (Generic,Binary,Typeable)
 
 data KillMsg = KillMsg ByteString
@@ -97,6 +99,10 @@ data ChangeUsersPasswordMsg = ChangeUsersPasswordMsg ByteString Text Text
 
 -- |n type points
 data PlotMsg = PlotMsg ByteString String String
+  deriving (Generic,Binary,Typeable)
+
+-- |n filename
+data PlotDoneMsg = PlotDoneMsg ByteString String
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg

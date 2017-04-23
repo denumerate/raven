@@ -29,7 +29,7 @@ newConnNode trans server conn = newEmptyMVar >>=
     (\connNode ->
        runProcess connNode
        (spawnLocal (forever (receiveWait
-                              [ match (sendResult conn)
+                              [ match (sendResult conn server)
                               , match (handleLog server)
                               , match (handleKill conn)
                               , matchUnknown (catchAllMsgs server "ConnNode")
@@ -38,10 +38,20 @@ newConnNode trans server conn = newEmptyMVar >>=
         return (connNode,pid)))
 
 -- |Takes the result of the servers work and sends it back to the client
-sendResult :: Connection -> ProcessedMsg -> Process ()
-sendResult conn (ProcessedMsg n msg) =
-  liftIO (Network.Transport.send conn [n," ",B.pack msg]) >> --error possible here
-  return ()
+sendResult :: Connection -> ProcessId -> ProcessedMsg -> Process ()
+sendResult conn server (ProcessedMsg n msg) =
+  liftIO (Network.Transport.send conn [n," ",B.pack msg]) >>= --error possible here
+  handleSent server
+sendResult conn server (ProcessedBSMsg n msg) =
+  liftIO (Network.Transport.send conn [n," ",msg]) >>= --error possible here
+  handleSent server
+
+-- |handles the output from a Transport send
+handleSent :: ProcessId -> Either (TransportError SendErrorCode) () -> Process ()
+handleSent server result = case result of
+  Left err -> buildLogMsg (show err) >>=
+    Control.Distributed.Process.send server
+  _ -> return ()
 
 -- |Handles the data send by a received event
 -- needs the servers process id
