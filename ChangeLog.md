@@ -1,6 +1,11 @@
 # Revision history for raven
 
 
+## 0.1.9 -- 17-4-21
+
+* The client has been rebuilt (partially) with the gtk3 package.
+
+
 ## 0.1.8 -- 17-3-12
 
 * The resource node now connects to a mongo database and uses that database

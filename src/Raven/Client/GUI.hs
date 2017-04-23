@@ -4,7 +4,6 @@ module Raven.Client.GUI
 
 import Network.Transport
 import Control.Concurrent
-import System.Directory
 
 import Control.Monad.IO.Class
 import Control.Monad
@@ -17,7 +16,7 @@ import Raven.Client.Connection
 
 -- |Builds and runs ui
 guiMain :: Connection -> EndPoint -> EndPointAddress -> IO ()
-guiMain conn end server = setUpFilePaths >>
+guiMain conn end server =
   void initGUI >>
   windowNew >>=
   (\w ->
@@ -33,12 +32,6 @@ guiMain conn end server = setUpFilePaths >>
             containerAdd w vbox))) >>
      widgetShowAll w) >>
   mainGUI
-
--- |Ensures that the file system is set up for the client
-setUpFilePaths :: IO ()
-setUpFilePaths = getHomeDirectory >>=
-  setCurrentDirectory >>
-  createDirectoryIfMissing True ".raven/client/plots"
 
 -- |window settings
 windowSettings :: Connection -> Window -> IO ()
@@ -95,15 +88,11 @@ inOuts conn buf = textViewNewWithBuffer buf >>=
             (newKey,_) -> liftIO (putMVar lastKey newKey))) >>
       return False
     handleShiftRet = liftIO (parseBuf buf) >>=
-      (\bstring -> case bstring of
-          Just bstring' -> liftIO $ sendReq conn 0 bstring'
-          _ -> liftIO $ print "plot")
+                     liftIO . sendReq conn 0
 
 -- |Get the last entry in the buffer
-parseBuf :: TextBuffer -> IO (Maybe ByteString)
+parseBuf :: TextBuffer -> IO ByteString
 parseBuf buf = textBufferGetStartIter buf >>=
   (\start -> textBufferGetEndIter buf >>=
     (\end -> textBufferGetByteString buf start end False)) >>=
-  (\bstring -> let val = last $ B.split '\n' bstring
-  in if B.isPrefixOf (B.pack ":plot") bstring then return Nothing
-     else return $ Just val)
+  return . last . B.split '\n'

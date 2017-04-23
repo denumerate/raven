@@ -26,7 +26,7 @@ newResourceNode :: Transport -> MVar ProcessId -> String -> IO ResourceNode
 newResourceNode trans server dbAddr =
   getHomeDirectory >>=
   setCurrentDirectory >>
-  createDirectoryIfMissing False ".raven" >>
+  createDirectoryIfMissing True ".raven/plots" >>
   openFile ".raven/log" AppendMode >>=
   (\logH -> hSetBuffering logH (BlockBuffering Nothing) >>
   DB.connect (DB.readHostPort dbAddr) >>=
