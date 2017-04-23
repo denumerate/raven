@@ -87,11 +87,15 @@ inOuts conn buf = textViewNewWithBuffer buf >>=
             (newKey,_) -> liftIO (putMVar lastKey newKey))) >>
       return False
     handleShiftRet = liftIO (parseBuf buf) >>=
-      liftIO . sendReq conn 0
+      (\bstring -> case bstring of
+          Just bstring' -> liftIO $ sendReq conn 0 bstring'
+          _ -> liftIO $ print "plot")
 
 -- |Get the last entry in the buffer
-parseBuf :: TextBuffer -> IO ByteString
+parseBuf :: TextBuffer -> IO (Maybe ByteString)
 parseBuf buf = textBufferGetStartIter buf >>=
   (\start -> textBufferGetEndIter buf >>=
     (\end -> textBufferGetByteString buf start end False)) >>=
-  return . last . B.split '\n'
+  (\bstring -> let val = last $ B.split '\n' bstring
+  in if B.isPrefixOf (B.pack ":plot") bstring then return Nothing
+     else return $ Just val)
