@@ -57,9 +57,9 @@ runPlot interpS (pid,pm@(PlotMsg n _ _)) = spawnLocal
   (liftIO (readMVar interpS) >>=
    (\interpS' -> liftIO (interpIO interpS' (buildPlotString pm))) >>=
    (\out -> case out of
-       Just err ->
+       Left err ->
          (Control.Distributed.Process.send pid . ProcessedMsg n) err
-       _ -> liftIO (print "plot"))) >>
+       Right fname -> liftIO (print fname))) >>
   return ()
 
 -- |builds the string that is run by the interpreter from a PlotMsg

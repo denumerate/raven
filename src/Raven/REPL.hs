@@ -14,12 +14,12 @@ interp interpS value = runInterpreter (interpS >> eval value) >>=
       Left err -> return (errorString err)
       Right out' -> return out')
 
--- |Interpret an io, Nothing if it worked, String contains errors
-interpIO :: Interpreter () -> String -> IO (Maybe String)
+-- |Interpret an io, Right if it worked, Left contains errors
+interpIO :: Interpreter () -> String -> IO (Either String String)
 interpIO interpS value = runInterpreter (interpS >> runIO value) >>=
   (\out -> case out of
-      Left err -> return $ Just $ errorString err
-      _ -> return Nothing)
+      Left err -> return $ Left $ errorString err
+      Right fname -> return $ Right fname)
 
 -- | prints errors
 errorString :: InterpreterError -> String
@@ -45,5 +45,5 @@ initREPL = setImportsQ
   ]
 
 -- |io interpreter wrapper
-runIO :: (MonadInterpreter m) => String -> m ()
-runIO code = interpret code (as :: IO ()) >>= liftIO
+runIO :: (MonadInterpreter m) => String -> m String
+runIO code = interpret code (as :: IO String) >>= liftIO
