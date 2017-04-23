@@ -54,8 +54,7 @@ windowSettings conn w =
 
 -- |cleans up extra files
 cleanFiles :: IO ()
-cleanFiles = listDirectory ".raven/client/plots" >>=
-  mapM_ (\name -> removeFile (".raven/client/plots/" ++ name))
+cleanFiles = removeDirectoryRecursive ".raven/client/plots"
 
 -- |Creates label that displays connection info and starts up the listening process
 buildConnInfo :: EndPoint -> EndPointAddress -> TextBuffer -> IO TextView

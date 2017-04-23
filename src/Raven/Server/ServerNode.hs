@@ -198,17 +198,17 @@ handleKill cMap uMap trans end resNode (cPID,(KillMsg n)) =
       _ -> Control.Distributed.Process.send cPID
            (ProcessedMsg n "Please Login"))
   where kill' =
-          liftIO (putStrLn "Killing server (30 seconds)") >>
+          liftIO (putStrLn "Killing server (40 seconds)") >>
           liftIO (readMVar resNode) >>=
           (\resNode' ->
              buildLogMsg "Killing Server" >>=
-            Control.Distributed.Process.send resNode' >>
-            liftIO (threadDelay 5000000) >>
-            Control.Distributed.Process.send resNode' (KillMsg "")) >>
+             Control.Distributed.Process.send resNode' >>
+             liftIO (threadDelay 5000000) >>
+             Control.Distributed.Process.send resNode' (KillMsg "")) >>
           liftIO (readMVar uMap) >>=
           return . Map.map killUsers >>
           liftIO (closeEndPoint end) >>
-          liftIO (threadDelay 25000000) >>
+          liftIO (threadDelay 35000000) >>
           liftIO (closeTransport trans)
         killUsers (_,Nothing) = return ()
         killUsers (_,Just rNode) =

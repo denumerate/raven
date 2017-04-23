@@ -2,6 +2,5 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
-extra-deps:
-- distributed-process-0.6.6
-resolver: lts-7.16
+extra-deps: []
+resolver: lts-8.11

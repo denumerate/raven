@@ -46,7 +46,8 @@ modBuf buf str =
 
 buildImg :: [ByteString] -> IO ()
 buildImg vals = let vals' = B.concat vals
-  in case decodeImage (B.drop 2 vals') of
+  in case decodeImage (B.tail (B.dropWhile (/= ' ') vals')) of
        Left str -> putStrLn str --log this
        Right img ->
-         savePngImage (".raven/client/plots/" ++ [B.head vals'] ++ ".png") img
+         savePngImage (".raven/client/plots/" ++
+                       B.unpack (B.takeWhile (/= ' ') vals') ++ ".png") img

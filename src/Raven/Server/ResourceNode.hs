@@ -66,9 +66,14 @@ handleLog h (LogMsg msg pid time) =
 -- |Handles a kill message by killing the node and closing (and flushing) the buffer.
 handleKill :: Handle -> DB.Pipe -> KillMsg -> Process ()
 handleKill h p _ =
+  liftIO cleanFiles >>
   liftIO (DB.close p) >>
   liftIO (hClose h) >>
   getSelfPid >>= (`exit` "Clean")
+
+-- |Cleans up all excess files
+cleanFiles :: IO ()
+cleanFiles = removeDirectoryRecursive ".raven/plots"
 
 -- |Handles a login message by sending a request to the database that makes sure
 -- the user exists and then makes sure that the returned data has the right information.
