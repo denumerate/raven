@@ -4,6 +4,7 @@ module Raven.Client.GUI
 
 import Network.Transport
 import Control.Concurrent
+import System.Directory
 
 import Control.Monad.IO.Class
 import Control.Monad
@@ -16,7 +17,8 @@ import Raven.Client.Connection
 
 -- |Builds and runs ui
 guiMain :: Connection -> EndPoint -> EndPointAddress -> IO ()
-guiMain conn end server = void initGUI >>
+guiMain conn end server = setUpFilePaths >>
+  void initGUI >>
   windowNew >>=
   (\w ->
      windowSettings conn w >>
@@ -31,6 +33,12 @@ guiMain conn end server = void initGUI >>
             containerAdd w vbox))) >>
      widgetShowAll w) >>
   mainGUI
+
+-- |Ensures that the file system is set up for the client
+setUpFilePaths :: IO ()
+setUpFilePaths = getHomeDirectory >>=
+  setCurrentDirectory >>
+  createDirectoryIfMissing True ".raven/client/plots"
 
 -- |window settings
 windowSettings :: Connection -> Window -> IO ()
