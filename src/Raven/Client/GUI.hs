@@ -12,8 +12,13 @@ import Graphics.UI.Gtk hiding (Action, backspace)
 
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
+import Data.Vector (Vector)
+import qualified Data.Vector as V
 
 import Raven.Client.Connection
+
+-- |WorkVector holds all the io data for the work area
+type WorkVector = MVar (Vector TextBuffer)
 
 -- |Builds and runs ui
 guiMain :: Connection -> EndPoint -> EndPointAddress -> IO ()
@@ -28,7 +33,8 @@ guiMain conn end server = buildFilePaths >>
           vBoxNew False 2 >>=
          (\vbox ->
             boxPackStart vbox connL PackNatural 2 >>
-            buildWork conn buf >>=
+            newMVar (V.singleton buf) >>=
+            buildWork conn >>=
             (\ws -> boxPackEnd vbox ws PackGrow 2) >>
             containerAdd w vbox))) >>
      widgetShowAll w) >>
@@ -71,36 +77,51 @@ buildConnInfo end server buf =
         return tview))
 
 -- |Creates the widget that allows for work
-buildWork :: Connection -> TextBuffer -> IO HBox
-buildWork conn buf =
+buildWork :: Connection -> WorkVector -> IO HBox
+buildWork conn wVector =
   hBoxNew False 2 >>=
   (\vbox ->
      vScrollbarNewDefaults >>=
      (\s -> boxPackEnd vbox s PackNatural 2 >>
-            inOuts conn buf >>=
+            inOuts conn wVector >>=
             (\ios -> boxPackStart vbox ios PackGrow 2)) >>
      return vbox)
 
 -- |creates input output areas
-inOuts :: Connection -> TextBuffer -> IO TextView
-inOuts conn buf = textViewNewWithBuffer buf >>=
-  (\i -> textViewSetCursorVisible i True >>
-         textViewSetWrapMode i WrapWordChar >>
-         newMVar 0 >>=
-         on i keyPressEvent . next >>
-         return i)
+inOuts :: Connection -> WorkVector -> IO VBox
+inOuts conn wVector = vBoxNew False 2 >>=
+  (\vbox ->
+     readMVar wVector >>=
+     V.mapM_ (build vbox) >>
+  return vbox)
   where
-    next lastKey = eventKeyVal >>=
+    build vbox buf =
+      textViewNewWithBuffer buf >>=
+      (\i ->
+          textViewSetCursorVisible i True >>
+          textViewSetWrapMode i WrapWordChar >>
+          newMVar 0 >>=
+          on i keyPressEvent . next vbox buf >>
+          boxPackStart vbox i PackGrow 2 >>
+          textViewPlaceCursorOnscreen i)
+    next vbox buf lastKey = eventKeyVal >>=
       (\key -> liftIO (takeMVar lastKey) >>=
         (\lastKey' -> case (key,lastKey') of
-            (65293,65505) -> handleShiftRet >>
+            (65293,65505) -> handleShiftRet vbox buf >>
                              liftIO (putMVar lastKey 0)
-            (65293,65506) -> handleShiftRet >>
+            (65293,65506) -> handleShiftRet vbox buf >>
                              liftIO (putMVar lastKey 0)
             (newKey,_) -> liftIO (putMVar lastKey newKey))) >>
       return False
-    handleShiftRet = liftIO (parseBuf buf) >>=
-                     liftIO . sendReq conn 0
+    handleShiftRet vbox buf = liftIO (takeMVar wVector) >>=
+                         (\wVector' ->
+                            liftIO (textBufferNew Nothing) >>=
+                            (\nbuf ->
+                               (liftIO . putMVar wVector . V.snoc wVector') nbuf >>
+                               liftIO (build vbox nbuf)) >>
+                            liftIO (widgetShowAll vbox)) >>
+                         liftIO (parseBuf buf) >>=
+                         liftIO . sendReq conn 0
 
 -- |Get the last entry in the buffer
 parseBuf :: TextBuffer -> IO ByteString
