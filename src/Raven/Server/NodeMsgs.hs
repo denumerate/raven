@@ -20,6 +20,7 @@ module Raven.Server.NodeMsgs
   , ChangeRootAccessMsg(..)
   , RootAccessChangedMsg(..)
   , ChangeUsersPasswordMsg(..)
+  , PlotMsg(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
@@ -92,6 +93,10 @@ data RootAccessChangedMsg = RootAccessChangedMsg ByteString Text Bool
 
 -- | n username newPassword
 data ChangeUsersPasswordMsg = ChangeUsersPasswordMsg ByteString Text Text
+  deriving (Generic,Binary,Typeable)
+
+-- |n type points
+data PlotMsg = PlotMsg ByteString String String
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg

@@ -28,6 +28,7 @@ newREPLNode trans server = newEmptyMVar >>=
         (spawnLocal (forever (receiveWait
                               [ match (runREPL interpS)
                               , match handleKill
+                              , match (runPlot interpS)
                               , matchUnknown (catchAllMsgs' server "REPLNode")
                               ])) >>=
          liftIO . putMVar pid) >>
@@ -47,3 +48,22 @@ runREPL interpS (pid,(REPLMsg n value)) = spawnLocal
 handleKill :: KillMsg -> Process ()
 handleKill _ = getSelfPid >>=
   (`exit` "Clean")
+
+-- |matches to a PlotMsg and runs the repl on the sent string.
+-- If successful, sends off the PlotMsg to the resource node to get the image,
+-- otherwise sends back errors.
+runPlot :: MVar (Interpreter ()) -> (ProcessId,PlotMsg) -> Process ()
+runPlot interpS (pid,pm@(PlotMsg n _ _)) = spawnLocal
+  (liftIO (readMVar interpS) >>=
+   (\interpS' -> liftIO (interpIO interpS' (buildPlotString pm))) >>=
+   (\out -> case out of
+       Just err ->
+         (Control.Distributed.Process.send pid . ProcessedMsg n) err
+       _ -> liftIO (print "plot"))) >>
+  return ()
+
+-- |builds the string that is run by the interpreter from a PlotMsg
+buildPlotString :: PlotMsg -> String
+buildPlotString (PlotMsg _ ptype pnts) =
+  "buildPlot $ plot $ " ++ ptype ++ " \"line\" [(" ++ pnts ++
+  " :: [(Double,Double)])]"

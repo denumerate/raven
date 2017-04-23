@@ -64,6 +64,9 @@ cmdMap = Map.fromList
   , (":changePassword",Cmd { parseFunc = parseChangePassword
                            , help = helpChangePassword
                            })
+  , (":plot", Cmd { parseFunc = parsePlot
+                  , help = helpPlot
+                  })
   ]
 
 -- |runs commands
@@ -318,3 +321,22 @@ helpChangePassword =
   \The command takes two arguments, \n\
   \the first is the username, the second the new password,\
   \Changing a user's password requires a logged on user with root access."
+
+-- |parse a plot command
+parsePlot :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parsePlot _ self [n,":plot",_] = send self $
+  ProcessedMsg n ":plot takes two arguments"
+parsePlot server self bs@(n:":plot":ptype:_) = send server
+  (self, PlotMsg n (B.unpack ptype) (B.unpack (B.unwords (drop 3 bs))))
+parsePlot _ self (n:":plot":_) = send self $
+  ProcessedMsg n ":plot takes two arguments"
+parsePlot server _ _ =
+  buildLogMsg "Command pattern match failed" >>=
+  send server
+
+-- |plot information
+helpPlot :: ByteString
+helpPlot =
+  ":plot attempts to build a graph and send back the image to the client.\n\
+  \The command takes two arguments, the first is the plot type,\n\
+  \the second the points (in a statement which is interpreted)"

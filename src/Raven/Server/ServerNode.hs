@@ -43,6 +43,7 @@ newServerNode trans end db = newLocalNode trans initRemoteTable >>=
                 Control.Distributed.Process.send resNode') >>
               spawnLocal (forever (receiveWait
                                    [ match (handleREPL trans conMap uMap serverpid)
+                                   , match (handlePlot trans conMap uMap serverpid)
                                    , match (handleLog resNode)
                                    , match (handleLogin resNode)
                                    , match (handleLoginSuc conMap uMap)
@@ -144,6 +145,38 @@ handleREPL trans cMap uMap self msg@(cPID,REPLMsg n _) = spawnLocal
   where
     failed = Control.Distributed.Process.send cPID
              (ProcessedMsg n "Please Login")
+
+-- |Handles a PlotMsg by looking for the users replNode (and handling errors)
+-- and then sending the message.
+-- If no node is found, one is created.
+handlePlot :: Transport -> MVar ConnMap -> MVar UserMap -> MVar ProcessId ->
+  (ProcessId,PlotMsg) -> Process ()
+handlePlot trans cMap uMap self msg@(cPID,PlotMsg n _ _) = spawnLocal
+  (liftIO (readMVar cMap) >>=
+   return . Map.lookup cPID >>=
+   (\uid -> case uid of
+       Just uid' -> liftIO (readMVar uMap) >>=
+            return . Map.lookup uid' >>=
+            (\usr -> case usr of
+                Just (_,Just rNode) ->
+                  liftIO (readMVar rNode) >>=
+                  (`Control.Distributed.Process.send` msg)
+                Just (acc,Nothing) ->
+                  liftIO (takeMVar uMap) >>=
+                  (\tUMap ->
+                     liftIO (newREPLNode trans self) >>=
+                     (\rNode ->
+                        liftIO (readMVar rNode) >>=
+                        (`Control.Distributed.Process.send` msg) >>
+                        liftIO (putMVar uMap
+                                (Map.insert uid' (acc,Just rNode) tUMap))))
+                _ -> failed)
+       _ -> failed)) >>
+  return ()
+  where
+    failed = Control.Distributed.Process.send cPID
+             (ProcessedMsg n "Please Login")
+
 
 -- |Handles a KillMsg by first ensuring that the user sending it has root access,
 -- and then sending a kill message to all connected nodes.
