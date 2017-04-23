@@ -1,6 +1,4 @@
-{-# LANGUAGE OverloadedStrings
-, ScopedTypeVariables
-#-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Raven.DataBase
   ( ensureUsers
   , checkUser

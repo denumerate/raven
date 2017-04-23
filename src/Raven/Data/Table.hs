@@ -80,10 +80,10 @@ buildTable titles vectors
 tableSummary :: (Entry a) => Table a -> [Text]
 tableSummary (Table ttls cols) = reverse $ V.ifoldl' compile [] cols
   where
-    compile acc ind val = (Text.concat [ ttls V.! ind
-                                       , ": \n"
-                                       , summary val
-                                       ]):acc
+    compile acc ind val = Text.concat [ ttls V.! ind
+                                      , ": \n"
+                                      , summary val
+                                      ]:acc
 
 -- |Pulls a column from the table by column index
 -- O(1)
@@ -95,7 +95,7 @@ getColByIndex (Table _ tab) ind = case tab V.!? ind of
 -- |Pulls a column from the table by title.
 -- O(n) where n is the number of columns
 getColByTitle :: Table a -> Text -> Either (Vector a) Error
-getColByTitle tab@(Table ttls _) ttl = case V.findIndex (\val -> val == ttl) ttls of
+getColByTitle tab@(Table ttls _) ttl = case V.findIndex (== ttl) ttls of
   Just ind -> getColByIndex tab ind
   _ -> Right titleNotFoundError
 
@@ -138,7 +138,7 @@ dropColByIndex t@(Table ttls cols) ind
 -- approximately twice as slow as by index.
 dropColByTitle :: Table a -> Text -> Either (Table a) Error
 dropColByTitle t@(Table ttls _) ttl =
-  case V.findIndex (\val -> val == ttl) ttls of
+  case V.findIndex (== ttl) ttls of
     Just ind -> dropColByIndex t ind
     _ -> Right titleNotFoundError
 
@@ -149,7 +149,7 @@ dropColsByIndex :: Table a -> [Int] -> Table a
 dropColsByIndex (Table ttls cols) inds =
   Table (V.ifilter ipred ttls) (V.ifilter ipred cols)
   where
-    ipred i _ = not $ elem i inds
+    ipred i _ = notElem i inds
 
 -- |takes a list of indices and filters out the associated columns.
 -- Does return an error if an index is missing.
@@ -177,7 +177,7 @@ dropColsByTitle' t@(Table ttls _) ttls' =
   let inds = V.toList $ V.findIndices  (`elem` ttls') ttls
   in if length ttls' == length inds
      then Left $ dropColsByIndex t inds
-     else Right $ titleNotFoundError
+     else Right titleNotFoundError
 
 -- |combines two table by concatenating their columns.
 -- Returns an error if both columns do not have the same number of rows.

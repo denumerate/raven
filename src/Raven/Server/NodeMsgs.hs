@@ -1,7 +1,4 @@
-{-# LANGUAGE
-  DeriveAnyClass
-, DeriveGeneric
-#-}
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 module Raven.Server.NodeMsgs
   ( REPLMsg(..)
   , ProcessedMsg(..)
@@ -108,8 +105,7 @@ data PlotDoneMsg = PlotDoneMsg ByteString String
 -- |Standardized LogMsg
 buildLogMsg :: String -> Process LogMsg
 buildLogMsg msg = getSelfPid >>=
-  (\self -> liftIO getCurrentTime >>=
-    (\time -> return (LogMsg msg self (show time))))
+  (\self -> fmap (LogMsg msg self . show) (liftIO getCurrentTime))
 
 -- |Final check to pick up unmatched messages.
 -- Needs the pid of the listen process, and node type

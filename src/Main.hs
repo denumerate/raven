@@ -1,5 +1,4 @@
-{-# LANGUAGE OverloadedStrings
-, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Main where
 
 import Network.Transport
@@ -47,9 +46,9 @@ main = getIp >>=
     ver = "0.1.9"
 
 getIp :: IO String
-getIp = getNetworkInterfaces >>=
-  return . map (show . ipv4) >>=
-  return . filter (\ip -> ip /= "0.0.0.0" && ip /= "127.0.0.1") >>=
+getIp =
+  fmap (filter (\ip -> ip /= "0.0.0.0" && ip /= "127.0.0.1") .
+         map (show . ipv4)) getNetworkInterfaces >>=
   (\ips -> if null ips then return "127.0.0.1" else return (head ips))
 
 buildDBString :: String -> Maybe String -> String
@@ -88,10 +87,10 @@ options =
      "Port Number")
     "Sets the port the client uses, default is 1234"
   , Option "p" ["serverPort"]
-    (ReqArg (\arg opt@(Options{..}) ->
+    (ReqArg (\arg opt@Options{..} ->
                 return opt
                 { serverPort = arg
-                , client = client >>= (return (Just ("127.0.0.1:" ++ arg ++ ":0")))
+                , client = client >>= return (Just ("127.0.0.1:" ++ arg ++ ":0"))
                 })
       "Port Number")
     "Sets the port the client uses, default is 4444"
@@ -102,10 +101,10 @@ options =
     (NoArg (\opt -> return opt{version = True}))
     "Print version info"
   , Option "l" ["localhost"]
-    (NoArg (\opt@(Options{..}) -> return opt
+    (NoArg (\opt@Options{..} -> return opt
              { ip = "127.0.0.1"
              , client = client >>=
-               (return (Just ("127.0.0.1:" ++ serverPort ++ ":0")))
+               return (Just ("127.0.0.1:" ++ serverPort ++ ":0"))
              }))
     "Sets the ip to localhost"
   , Option "I" ["database ip address"]

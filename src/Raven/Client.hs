@@ -21,9 +21,6 @@ initClient ip portNum serverAdrs = withSocketsDo $
                   Right conn' ->
                     guiMain conn' end' serverAdrs >>
                     closeTransport trans'
-                  _ -> putStrLn "Connection Refused, Client Failed" >> --move to log
-                    return ())
-            _ -> putStrLn "Endpoint not initialized, Client Failed" >> --move to log
-                 return ())
-      _ -> putStrLn "Transport not initialized, Client Failed" >> --move to log
-        return ())
+                  _ -> putStrLn "Connection Refused, Client Failed")
+            _ -> putStrLn "Endpoint not initialized, Client Failed")
+      _ -> putStrLn "Transport not initialized, Client Failed")

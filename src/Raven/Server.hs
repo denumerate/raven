@@ -17,7 +17,5 @@ initServer ip portNum db = withSocketsDo $
       Right trans' -> newEndPoint trans' >>=
         (\end -> case end of
             Right end' -> newServerNode trans' end' db
-            _ -> putStrLn "Endpoint not initialized, Server Failed" >> --move to log
-                 return ())
-      _ -> putStrLn "Transport not initialized, Server Failed" >> --move to log
-        return ())
+            _ -> putStrLn "Endpoint not initialized, Server Failed")
+      _ -> putStrLn "Transport not initialized, Server Failed")

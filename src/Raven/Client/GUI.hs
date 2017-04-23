@@ -62,7 +62,7 @@ buildConnInfo end server buf =
   textBufferNew Nothing >>=
   (\tbuf ->
      forkIO (listenAtEnd end tbuf buf) >>
-     textBufferSetText tbuf ("Connection Established: " ++ (show server)) >>
+     textBufferSetText tbuf ("Connection Established: " ++ show server) >>
      textViewNewWithBuffer tbuf >>=
      (\tview ->
         set tview [ textViewCursorVisible := False
@@ -104,7 +104,7 @@ inOuts conn buf = textViewNewWithBuffer buf >>=
 
 -- |Get the last entry in the buffer
 parseBuf :: TextBuffer -> IO ByteString
-parseBuf buf = textBufferGetStartIter buf >>=
+parseBuf buf = fmap (last . B.split '\n') $
+  textBufferGetStartIter buf >>=
   (\start -> textBufferGetEndIter buf >>=
-    (\end -> textBufferGetByteString buf start end False)) >>=
-  return . last . B.split '\n'
+    (\end -> textBufferGetByteString buf start end False))

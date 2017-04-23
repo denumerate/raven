@@ -27,7 +27,7 @@ mean ls = sum ls / (fromIntegral . length) ls
 -- |Mean for integral values
 intMean :: (Integral a) => [a] -> Ratio a
 intMean [] = 0
-intMean ls = (sum) ls % (fromIntegral . length) ls
+intMean ls = sum ls % (fromIntegral . length) ls
 
 -- |Median for fractional values
 median :: (Fractional a,Ord a) => [a] -> a
@@ -46,7 +46,7 @@ intMedian ls = let len = length ls
                    ls' = sort ls
                    pnt = div len 2
                in if odd len
-                   then (last (take (pnt + 1) ls')) % 1
+                   then last (take (pnt + 1) ls') % 1
                    else intMean $ snd $ splitAt (pnt-1) $ take (pnt+1) ls'
 
 -- |Counts the number of times each item in a list occurs

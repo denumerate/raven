@@ -8,7 +8,7 @@ import Network.Transport
 import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
-import Control.Monad(forever)
+import Control.Monad(forever,void)
 import qualified Database.MongoDB as DB
 
 import System.IO
@@ -79,7 +79,7 @@ cleanFiles = removeDirectoryRecursive ".raven/plots"
 -- the user exists and then makes sure that the returned data has the right information.
 -- Also sends a message to the connection node regarding success/failure
 handleLogin :: MVar ProcessId -> DB.Pipe -> (ProcessId,LoginMsg) -> Process ()
-handleLogin server p (cPID,LoginMsg n name pass) = spawnLocal
+handleLogin server p (cPID,LoginMsg n name pass) = void $ spawnLocal
   (liftIO (readMVar server) >>=
    (\server' -> liftIO (checkUser p name pass) >>=
      (\ret -> case ret of
@@ -89,37 +89,33 @@ handleLogin server p (cPID,LoginMsg n name pass) = spawnLocal
          (Just (Right err)) -> buildLogMsg err >>=
            Control.Distributed.Process.send server' >>
            Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")
-         _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")))) >>
-    return ()
+         _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed"))))
 
 -- |Handles an allUsers message by asking the database for all users, formatting them,
 -- and sending them back to the connection node.
 handleAllUsers :: DB.Pipe -> (ProcessId,AllUsersMsg) -> Process ()
-handleAllUsers p (cPID,AllUsersMsg n) = spawnLocal
+handleAllUsers p (cPID,AllUsersMsg n) = void $ spawnLocal
   (liftIO (getAllUsers p) >>=
-   Control.Distributed.Process.send cPID . ProcessedMsg n) >>
-  return ()
+   Control.Distributed.Process.send cPID . ProcessedMsg n)
 
 -- |Handles an addUser message by asking the database to add a user and sending
 -- the result back to the connNode.
 handleAddUser :: DB.Pipe -> (ProcessId,AddUserMsg) -> Process ()
-handleAddUser p (cPID,AddUserMsg n name pswd rAcc) = spawnLocal
+handleAddUser p (cPID,AddUserMsg n name pswd rAcc) = void $ spawnLocal
   (liftIO (addUser p name pswd rAcc) >>=
-   Control.Distributed.Process.send cPID . ProcessedMsg n) >>
-  return ()
+   Control.Distributed.Process.send cPID . ProcessedMsg n)
 
 -- |Handles a delete user message by asking the database to remove the user.
 -- If successful, tell the severnode, if not, tells connNode
 handleDeleteUser :: DB.Pipe -> MVar ProcessId -> (ProcessId,DeleteUserMsg) ->
   Process ()
-handleDeleteUser p server (cPID,DeleteUserMsg n name) = spawnLocal
+handleDeleteUser p server (cPID,DeleteUserMsg n name) = void $ spawnLocal
   (liftIO (deleteUser p name) >>=
    (\out -> case out of
        Just id' -> liftIO (readMVar server) >>=
          (`Control.Distributed.Process.send` (cPID,DeleteUserSuccMsg n id'))
        _ -> Control.Distributed.Process.send cPID
-         (ProcessedMsg n "User not found"))) >>
-  return ()
+         (ProcessedMsg n "User not found")))
 
 -- |Handles an updateusersaccess message by asking the database to find and
 -- update the user.
@@ -127,14 +123,13 @@ handleDeleteUser p server (cPID,DeleteUserMsg n name) = spawnLocal
 handleChangeRootAccess :: DB.Pipe -> MVar ProcessId ->
   (ProcessId,ChangeRootAccessMsg) -> Process ()
 handleChangeRootAccess p server (cPID,ChangeRootAccessMsg n name rAcc) =
-  spawnLocal
+  void $ spawnLocal
   (liftIO (updateUsersAccess p name rAcc) >>=
     (\out -> case out of
         Just id' -> liftIO (readMVar server) >>=
           (`Control.Distributed.Process.send` (cPID,RootAccessChangedMsg n id' rAcc))
         _ -> Control.Distributed.Process.send cPID
-          (ProcessedMsg n "User not found"))) >>
-  return ()
+          (ProcessedMsg n "User not found")))
 
 -- |Handles a ChangeUsersPasswordMsg by asking the database to find and
 -- update the user.
@@ -142,22 +137,21 @@ handleChangeRootAccess p server (cPID,ChangeRootAccessMsg n name rAcc) =
 handleChangeUsersPassword :: DB.Pipe -> (ProcessId, ChangeUsersPasswordMsg) ->
   Process ()
 handleChangeUsersPassword p (cPID, ChangeUsersPasswordMsg n name pswd) =
-  spawnLocal
+  void $ spawnLocal
   (liftIO (updateUsersPassword p name pswd) >>=
     (\out -> case out of
         Just _ ->
           Control.Distributed.Process.send cPID $
              ProcessedMsg n "Password Changed"
         _ -> Control.Distributed.Process.send cPID
-          (ProcessedMsg n "User not found"))) >>
-  return ()
+          (ProcessedMsg n "User not found")))
 
 -- |Handles a PlotDoneMsg by sending a serialized version of the image to the user
 -- and then removing the file
 handlePlotDone :: (ProcessId,PlotDoneMsg) -> Process ()
 handlePlotDone (cPID,PlotDoneMsg n fname) =
   let fname' = ".raven/plots/" ++ fname
-  in spawnLocal
+  in void $ spawnLocal
      (liftIO (doesFileExist fname') >>=
        (\exists -> if exists
                    then liftIO (readImage fname') >>=
@@ -174,5 +168,4 @@ handlePlotDone (cPID,PlotDoneMsg n fname) =
                                  (ProcessedBSMsg n (B.toStrict bstring))) >>
                         liftIO (removeFile fname')
                    else Control.Distributed.Process.send cPID
-                        (ProcessedMsg n "File error"))) >>
-  return ()
+                        (ProcessedMsg n "File error")))

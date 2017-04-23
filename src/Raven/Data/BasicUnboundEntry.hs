@@ -9,6 +9,7 @@ import Text.Read
 import Data.Typeable
 import qualified Data.Vector as V
 import Data.Ratio
+import Data.Maybe
 
 import Raven.Data.Entry
 import Raven.Data.Stat
@@ -23,11 +24,11 @@ data BasicUnboundEntry = BasicUnboundInt Integer
 
 instance Entry BasicUnboundEntry where
   readEntry val
-    |(readMaybe val :: Maybe Integer) /= Nothing =
+    |isJust (readMaybe val :: Maybe Integer) =
        BasicUnboundInt $ read val
-    |(readMaybe val :: Maybe Double) /= Nothing =
+    |isJust (readMaybe val :: Maybe Double) =
        BasicUnboundDouble $ read val
-    |(readMaybe val :: Maybe Bool) /= Nothing =
+    |isJust (readMaybe val :: Maybe Bool) =
        BasicUnboundBool $ read val
     |val == "NA" = BasicUnboundNA
     |otherwise = BasicUnboundString $ Text.pack val
@@ -46,7 +47,7 @@ instance Entry BasicUnboundEntry where
 
   summary vs
     |V.null vs = "Empty vector"
-    |length (getEntries vs :: [Integer]) /= 0 = let vs' = (getEntries vs :: [Integer]) in
+    |not (null (getEntries vs :: [Integer])) = let vs' = (getEntries vs :: [Integer]) in
        Text.concat [ "Mean: ", (Text.pack . show . intMean) vs'
                    , "\nMedian: ", (Text.pack . show . intMedian) vs'
                    , "\nMode: ", (Text.pack . show . mode) vs'
@@ -57,7 +58,7 @@ instance Entry BasicUnboundEntry where
                    , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                    , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                    ]
-    |length (getEntries vs :: [Float]) /= 0 =
+    |not (null (getEntries vs :: [Float])) =
        let vs' = (getEntries vs :: [Float]) in
          Text.concat [ "Mean: ", (Text.pack . show . mean) vs'
                      , "\nMedian: ", (Text.pack . show . median) vs'
@@ -69,7 +70,7 @@ instance Entry BasicUnboundEntry where
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                      , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                      ]
-    |length (getEntries vs :: [Ratio Integer]) /= 0 =
+    |not (null (getEntries vs :: [Ratio Integer])) =
        let vs' = (getEntries vs :: [Ratio Integer]) in
          Text.concat [ "Mean: ", (Text.pack . show . mean) vs'
                      , "\nMedian: ", (Text.pack . show . median) vs'
@@ -81,7 +82,7 @@ instance Entry BasicUnboundEntry where
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                      , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                      ]
-    |length (getEntries vs :: [Bool]) /= 0 =
+    |not (null (getEntries vs :: [Bool])) =
        let vs' = (getEntries vs :: [Bool]) in
          Text.concat [ "Breakdown: ", (Text.pack . show . countInstances) vs'
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs

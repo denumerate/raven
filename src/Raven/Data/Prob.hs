@@ -31,7 +31,7 @@ type EventSeq a b = [(ProbSet a b,[a])]
 -- (all probabilities add to one and all [0,1]).
 isValidSet :: (Num b,Ord b) => ProbSet a b -> Bool
 isValidSet pSet = (1 == Map.foldl' (+) 0 pSet) &&
-  (all (\n -> n >= 0 && n <= 1) (Map.elems pSet))
+  all (\n -> n >= 0 && n <= 1) (Map.elems pSet)
 
 -- |Calculates the probability of a subset of events happening.
 -- Returns 0 if empty set or a missing event.
@@ -40,8 +40,8 @@ isValidSet pSet = (1 == Map.foldl' (+) 0 pSet) &&
 subSetProb :: (Ord a,Num b) => ProbSet a b -> [a] -> b
 subSetProb pSet subSet =
   case foldl' (\acc val -> acc >>=
-              (\acc' -> Map.lookup val pSet >>=
-              return . (+acc'))) (Just 0) subSet of
+                (\acc' -> fmap (+acc') (Map.lookup val pSet)))
+       (Just 0) subSet of
     Just p -> p
     _ -> 0
 
@@ -75,8 +75,8 @@ getAllEvents :: EventSeq Text b -> [Text]
 getAllEvents = map (Text.concat . reverse) . foldl' combine []
   where
     combine :: [[Text]] -> (ProbSet Text b,[Text]) ->[[Text]]
-    combine [] (pSet,[]) = map (\val -> [val]) $ Map.keys pSet
-    combine [] (_,subSet) = map (\val -> [val]) subSet
+    combine [] (pSet,[]) = map (:[]) $ Map.keys pSet
+    combine [] (_,subSet) = map (:[]) subSet
     combine acc (pSet,[]) = let ks = Map.keys pSet in
       concatMap (\val -> map (\k -> k:";":val) ks) acc
     combine acc (_,subSet) =
@@ -104,7 +104,7 @@ bayes pSet e1 e2 = (conditionalProb pSet e2 e1 * subSetProb pSet e1) /
 -- Assumes a valid ProbSet
 -- (to avoid the possibility of rounding errors in the predicate).
 distributionFunc :: (Ord a,Num b) => ProbSet a b -> (a -> b)
-distributionFunc pSet = (\val -> subSetProb pSet (filter (<= val) (Map.keys pSet)))
+distributionFunc pSet val = subSetProb pSet (filter (<= val) (Map.keys pSet))
 
 -- |Takes a distribution function and two points, finds the probability that any event
 -- That an event between and including the larger point will happen.

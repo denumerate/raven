@@ -44,7 +44,7 @@ instance Entry BasicEntry where
 
   summary vs
     |V.null vs = "Empty vector"
-    |length (getEntries vs :: [Int]) /= 0 = let vs' = (getEntries vs :: [Int]) in
+    |not (null (getEntries vs :: [Int])) = let vs' = (getEntries vs :: [Int]) in
        Text.concat [ "Mean: ", (Text.pack . show . intMean) vs'
                    , "\nMedian: ", (Text.pack . show . intMedian) vs'
                    , "\nMode: ", (Text.pack . show . mode) vs'
@@ -55,7 +55,7 @@ instance Entry BasicEntry where
                    , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                    , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                    ]
-    |length (getEntries vs :: [Double]) /= 0 =
+    |not (null (getEntries vs :: [Double])) =
        let vs' = (getEntries vs :: [Double]) in
          Text.concat [ "Mean: ", (Text.pack . show . mean) vs'
                      , "\nMedian: ", (Text.pack . show . median) vs'
@@ -67,7 +67,7 @@ instance Entry BasicEntry where
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                      , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                      ]
-    |length (getEntries vs :: [Ratio Int]) /= 0 =
+    |not (null (getEntries vs :: [Ratio Int])) =
        let vs' = (getEntries vs :: [Ratio Int]) in
          Text.concat [ "Mean: ", (Text.pack . show . mean) vs'
                      , "\nMedian: ", (Text.pack . show . median) vs'
@@ -79,7 +79,7 @@ instance Entry BasicEntry where
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs
                      , "\nNumber of Entries: ", (Text.pack . show . V.length) vs
                      ]
-    |length (getEntries vs :: [Bool]) /= 0 =
+    |not (null (getEntries vs :: [Bool])) =
        let vs' = (getEntries vs :: [Bool]) in
          Text.concat [ "Breakdown: ", (Text.pack . show . countInstances) vs'
                      , "\nNumber of NA's: ", (Text.pack . show . countNAs) vs

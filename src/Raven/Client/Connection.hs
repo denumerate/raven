@@ -11,6 +11,8 @@ import Codec.Picture
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 
+import Control.Monad (void)
+
 -- |Listens at endpoint and handles events
 listenAtEnd :: EndPoint -> TextBuffer -> TextBuffer -> IO ()
 listenAtEnd end connbuf workbuf =
@@ -35,8 +37,7 @@ listenAtEnd end connbuf workbuf =
 -- |Sends a request to the server.
 -- Needs the connection, the line number, and the message
 sendReq :: Connection -> Int -> ByteString -> IO ()
-sendReq conn n val = send conn [B.pack $ show n,B.pack " ",val] >> --error possible
-  return ()
+sendReq conn n val = void $ send conn [B.pack $ show n,B.pack " ",val] --error possible
 
 -- |updates the work buffer
 modBuf :: TextBuffer -> ByteString -> IO ()
