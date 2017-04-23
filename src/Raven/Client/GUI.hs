@@ -4,6 +4,7 @@ module Raven.Client.GUI
 
 import Network.Transport
 import Control.Concurrent
+import System.Directory
 
 import Control.Monad.IO.Class
 import Control.Monad
@@ -16,7 +17,7 @@ import Raven.Client.Connection
 
 -- |Builds and runs ui
 guiMain :: Connection -> EndPoint -> EndPointAddress -> IO ()
-guiMain conn end server =
+guiMain conn end server = buildFilePaths >>
   void initGUI >>
   windowNew >>=
   (\w ->
@@ -33,16 +34,28 @@ guiMain conn end server =
      widgetShowAll w) >>
   mainGUI
 
+-- |Ensures that the correct filepaths exist
+buildFilePaths :: IO ()
+buildFilePaths = getHomeDirectory >>=
+  setCurrentDirectory >>
+  createDirectoryIfMissing True ".raven/client/plots"
+
 -- |window settings
 windowSettings :: Connection -> Window -> IO ()
 windowSettings conn w =
   set w [ windowTitle := "raven"
         ]>>
   windowFullscreen w >>
-  on w deleteEvent (liftIO (close conn) >>
+  on w deleteEvent (liftIO cleanFiles >>
+                    liftIO (close conn) >>
                     liftIO mainQuit >>
                     return False) >>
   return ()
+
+-- |cleans up extra files
+cleanFiles :: IO ()
+cleanFiles = listDirectory ".raven/client/plots" >>=
+  mapM_ (\name -> removeFile (".raven/client/plots/" ++ name))
 
 -- |Creates label that displays connection info and starts up the listening process
 buildConnInfo :: EndPoint -> EndPointAddress -> TextBuffer -> IO TextView
