@@ -29,7 +29,7 @@ executable raven
                        Raven.Client
                        Raven.Client.GUI
                        Raven.Client.Connection
-                       Raven.Client.Plot
+                       Raven.Plot
                        Raven.DataBase
   build-depends:       base >=4.9 && <4.10
                      , hint
