@@ -34,72 +34,72 @@ import GHC.Generics
 import Data.ByteString.Char8 (ByteString)
 import Data.Text (Text)
 
-data REPLMsg = REPLMsg ByteString String
+data REPLMsg = REPLMsg !ByteString !String
   deriving (Generic,Binary,Typeable)
 
-data ProcessedMsg = ProcessedMsg ByteString String
-                  | ProcessedBSMsg ByteString ByteString
+data ProcessedMsg = ProcessedMsg !ByteString !String
+                  | ProcessedBSMsg !ByteString !ByteString
   deriving (Generic,Binary,Typeable)
 
 data KillMsg = KillMsg ByteString
   deriving (Generic,Binary,Typeable)
 
 -- |LogMsg holds: the message, processId, timestamp
-data LogMsg = LogMsg String ProcessId String
+data LogMsg = LogMsg !String !ProcessId !String
   deriving (Generic,Binary,Typeable)
 
 -- |LoginMsg holds: line,username,password
-data LoginMsg = LoginMsg ByteString Text Text
+data LoginMsg = LoginMsg !ByteString !Text !Text
   deriving (Generic,Binary,Typeable)
 
 -- |LoginSuccMsg holds: (id,access)
-data LoginSucMsg = LoginSucMsg (Text,Bool)
+data LoginSucMsg = LoginSucMsg !(Text,Bool)
  deriving (Generic,Binary,Typeable)
 
 -- |NewTnameokenMsg holds: (Token, id)
-data NewTokenMsg = NewTokenMsg (Text,Text)
+data NewTokenMsg = NewTokenMsg !(Text,Text)
   deriving (Generic,Binary,Typeable)
 
-data LogoutMsg = LogoutMsg ByteString
+data LogoutMsg = LogoutMsg !ByteString
   deriving (Generic,Binary,Typeable)
 
-data REPLInfoMsg = REPLInfoMsg ByteString
+data REPLInfoMsg = REPLInfoMsg !ByteString
   deriving (Generic,Binary,Typeable)
 
-data StopREPLMSG = StopREPLMSG ByteString
+data StopREPLMSG = StopREPLMSG !ByteString
   deriving (Generic,Binary,Typeable)
 
-data AllUsersMsg = AllUsersMsg ByteString
+data AllUsersMsg = AllUsersMsg !ByteString
   deriving (Generic,Binary,Typeable)
 
 -- |n,username,passwd,rootaccess
-data AddUserMsg = AddUserMsg ByteString Text Text Bool
+data AddUserMsg = AddUserMsg !ByteString !Text !Text !Bool
   deriving (Generic,Binary,Typeable)
 
-data DeleteUserMsg = DeleteUserMsg ByteString Text
+data DeleteUserMsg = DeleteUserMsg !ByteString !Text
   deriving (Generic,Binary,Typeable)
 
-data DeleteUserSuccMsg = DeleteUserSuccMsg ByteString Text
+data DeleteUserSuccMsg = DeleteUserSuccMsg !ByteString !Text
   deriving (Generic,Binary,Typeable)
 
 -- |n username newAccess
-data ChangeRootAccessMsg = ChangeRootAccessMsg ByteString Text Bool
+data ChangeRootAccessMsg = ChangeRootAccessMsg !ByteString !Text !Bool
   deriving (Generic,Binary,Typeable)
 
 -- |same scheme as above
-data RootAccessChangedMsg = RootAccessChangedMsg ByteString Text Bool
+data RootAccessChangedMsg = RootAccessChangedMsg !ByteString !Text !Bool
   deriving (Generic,Binary,Typeable)
 
 -- | n username newPassword
-data ChangeUsersPasswordMsg = ChangeUsersPasswordMsg ByteString Text Text
+data ChangeUsersPasswordMsg = ChangeUsersPasswordMsg !ByteString !Text !Text
   deriving (Generic,Binary,Typeable)
 
 -- |n type points
-data PlotMsg = PlotMsg ByteString String String
+data PlotMsg = PlotMsg !ByteString !String !String
   deriving (Generic,Binary,Typeable)
 
 -- |n filename
-data PlotDoneMsg = PlotDoneMsg ByteString String
+data PlotDoneMsg = PlotDoneMsg !ByteString !String
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg
