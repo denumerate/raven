@@ -21,4 +21,5 @@ buildPlot graph = getHomeDirectory >>=
 -- |Creates the file name using the utctime
 buildPlotName :: UTCTime -> String
 buildPlotName time =
+  map (\c -> if c == ':' then '_' else c) $
   head (tail (words (show time))) ++ ".png"

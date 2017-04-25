@@ -54,7 +54,7 @@ handleKill _ = getSelfPid >>=
 runPlot :: MVar (Interpreter ()) -> MVar ProcessId -> (ProcessId,PlotMsg) -> Process ()
 runPlot interpS server (pid,pm@(PlotMsg n _ _)) = void $ spawnLocal
   (liftIO (readMVar interpS) >>=
-   (\interpS' -> liftIO (readMVar server) >>=
+    (\interpS' -> liftIO (readMVar server) >>=
       (\server' -> liftIO (interpIO interpS' (buildPlotString pm)) >>=
         (\out -> case out of
             Left err ->

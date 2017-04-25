@@ -103,7 +103,7 @@ inOuts conn wVector = vBoxNew False 2 >>=
           newMVar 0 >>=
           on i keyPressEvent . next vbox buf >>
           boxPackStart vbox i PackGrow 2 >>
-          textViewPlaceCursorOnscreen i)
+          textViewSetCursorVisible i True)
     next vbox buf lastKey = eventKeyVal >>=
       (\key -> liftIO (takeMVar lastKey) >>=
         (\lastKey' -> case (key,lastKey') of
@@ -119,13 +119,16 @@ inOuts conn wVector = vBoxNew False 2 >>=
                             (\nbuf ->
                                (liftIO . putMVar wVector . V.snoc wVector') nbuf >>
                                liftIO (build vbox nbuf)) >>
-                            liftIO (widgetShowAll vbox)) >>
-                         liftIO (parseBuf buf) >>=
-                         liftIO . sendReq conn 0
+                            liftIO (widgetShowAll vbox) >>
+                            return (length wVector' - 1)) >>=
+                         (\n -> liftIO (parseBuf buf) >>=
+                                liftIO . sendReq conn n)
 
 -- |Get the last entry in the buffer
 parseBuf :: TextBuffer -> IO ByteString
-parseBuf buf = fmap (last . B.split '\n') $
+parseBuf buf = fmap (\bstring ->
+                       if B.null bstring then B.empty
+                       else (last . B.split '\n') bstring) $
   textBufferGetStartIter buf >>=
   (\start -> textBufferGetEndIter buf >>=
     (\end -> textBufferGetByteString buf start end False))

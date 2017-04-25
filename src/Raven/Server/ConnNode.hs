@@ -43,6 +43,7 @@ sendResult conn server (ProcessedMsg n msg) =
   liftIO (Network.Transport.send conn [n," ",B.pack msg]) >>= --error possible here
   handleSent server
 sendResult conn server (ProcessedBSMsg n msg) =
+  liftIO (print (B.length msg)) >>
   liftIO (Network.Transport.send conn [n," ",msg]) >>= --error possible here
   handleSent server
 

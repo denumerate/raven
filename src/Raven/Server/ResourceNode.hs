@@ -153,19 +153,19 @@ handlePlotDone (cPID,PlotDoneMsg n fname) =
   let fname' = ".raven/plots/" ++ fname
   in void $ spawnLocal
      (liftIO (doesFileExist fname') >>=
-       (\exists -> if exists
-                   then liftIO (readImage fname') >>=
-                        (\img -> case img of
-                            Left str ->
-                               Control.Distributed.Process.send cPID
-                                 (ProcessedMsg n str)
-                            Right img' -> case encodeDynamicBitmap img' of
-                              Left str ->
-                                Control.Distributed.Process.send cPID
-                                 (ProcessedMsg n str)
-                              Right bstring ->
-                                Control.Distributed.Process.send cPID
-                                 (ProcessedBSMsg n (B.toStrict bstring))) >>
-                        liftIO (removeFile fname')
+       (\exists -> if exists then liftIO (readImage fname') >>=
+         (\img -> case img of
+             Left str ->
+               Control.Distributed.Process.send cPID (ProcessedMsg n str)
+             Right img' -> case encodeDynamicBitmap img' of
+               Left str ->
+                 Control.Distributed.Process.send cPID
+                 (ProcessedMsg n str)
+               Right bstring ->
+                 liftIO (print (B.take 100 bstring)) >>
+                 Control.Distributed.Process.unsafeSend cPID
+                 (ProcessedBSMsg n (B.toStrict bstring))) >>
+         liftIO (print "sent") >>
+         liftIO (removeFile fname')
                    else Control.Distributed.Process.send cPID
                         (ProcessedMsg n "File error")))
