@@ -10,10 +10,14 @@ import Network.Transport
 import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
-import Control.Monad (forever)
+import Control.Monad (forever,void)
 
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy as LB
+
+import System.Directory
+import Codec.Picture
 
 import Raven.Server.NodeMsgs
 import Raven.Server.Commands
@@ -30,6 +34,7 @@ newConnNode trans server conn = newEmptyMVar >>=
        runProcess connNode
        (spawnLocal (forever (receiveWait
                               [ match (sendResult conn server)
+                              , match (handlePlotDone conn server)
                               , match (handleLog server)
                               , match (handleKill conn)
                               , matchUnknown (catchAllMsgs server "ConnNode")
@@ -40,11 +45,10 @@ newConnNode trans server conn = newEmptyMVar >>=
 -- |Takes the result of the servers work and sends it back to the client
 sendResult :: Connection -> ProcessId -> ProcessedMsg -> Process ()
 sendResult conn server (ProcessedMsg n msg) =
-  liftIO (Network.Transport.send conn [n," ",B.pack msg]) >>= --error possible here
+  liftIO (Network.Transport.send conn [n," ",B.pack msg]) >>=
   handleSent server
 sendResult conn server (ProcessedBSMsg n msg) =
-  liftIO (print (B.length msg)) >>
-  liftIO (Network.Transport.send conn [n," ",msg]) >>= --error possible here
+  liftIO (Network.Transport.send conn [n," ",msg]) >>=
   handleSent server
 
 -- |handles the output from a Transport send
@@ -84,3 +88,27 @@ cleanConnNode (connNode,self) = readMVar self >>=
 -- Process should be the server node.
 handleLog :: ProcessId -> LogMsg -> Process ()
 handleLog = Control.Distributed.Process.send
+
+-- |Handles a PlotDoneMsg by sending a serialized version of the image to the user
+-- and then removing the file
+handlePlotDone :: Connection -> ProcessId -> PlotDoneMsg -> Process ()
+handlePlotDone conn server (PlotDoneMsg n fname) =
+  let fname' = ".raven/plots/" ++ fname
+  in void $ spawnLocal
+     (liftIO (doesFileExist fname') >>=
+       (\exists -> if exists then liftIO (readImage fname') >>=
+         (\img -> case img of
+             Left str ->
+               liftIO (Network.Transport.send conn [n," ",B.pack str]) >>=
+               handleSent server
+             Right img' -> case encodeDynamicBitmap img' of
+               Left str ->
+                 liftIO (Network.Transport.send conn [n," ",B.pack str]) >>=
+                 handleSent server
+               Right bstring ->
+                 liftIO (Network.Transport.send conn [n," ",LB.toStrict bstring]) >>=
+                 handleSent server) >>
+         liftIO (removeFile fname')
+                   else
+                     liftIO (Network.Transport.send conn [n," ","File Error"]) >>=
+                     handleSent server))
