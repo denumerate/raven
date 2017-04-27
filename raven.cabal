@@ -75,6 +75,8 @@ library
                      , Chart-cairo >= 1.8
                      , directory >= 1.2
                      , time >= 1.6
+                     , JuicyPixels >= 3.2
+                     , bytestring >= 0.10
   hs-source-dirs:      src
   default-language:    Haskell2010
 

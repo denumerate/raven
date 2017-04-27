@@ -1,11 +1,12 @@
 module Raven.REPL ( interp
-                  , interpIO
+                  , interpPlot
                   , initREPL
-                  , runIO
                   ) where
 
 import Language.Haskell.Interpreter
 import Data.List (intercalate)
+
+import Data.ByteString.Char8 (ByteString)
 
 -- |Interpret a string, return the result
 interp :: Interpreter () -> String -> IO String
@@ -15,8 +16,8 @@ interp interpS value = runInterpreter (interpS >> eval value) >>=
       Right out' -> return out')
 
 -- |Interpret an io, Right if it worked, Left contains errors
-interpIO :: Interpreter () -> String -> IO (Either String String)
-interpIO interpS value = runInterpreter (interpS >> runIO value) >>=
+interpPlot :: Interpreter () -> String -> IO (Either String (Either String ByteString))
+interpPlot interpS value = runInterpreter (interpS >> runPlot value) >>=
   (\out -> case out of
       Left err -> return $ Left $ errorString err
       Right fname -> return $ Right fname)
@@ -42,8 +43,9 @@ initREPL = setImportsQ
   , ("Raven.Data.Table", Nothing)
   , ("Raven.Plot", Nothing)
   , ("Graphics.Rendering.Chart.Easy", Nothing)
+  , ("Data.ByteString.Char8", Just "Char8")
   ]
 
 -- |io interpreter wrapper
-runIO :: (MonadInterpreter m) => String -> m String
-runIO code = interpret code (as :: IO String) >>= liftIO
+runPlot :: (MonadInterpreter m) => String -> m (Either String ByteString)
+runPlot code = interpret code (as :: IO (Either String ByteString)) >>= liftIO

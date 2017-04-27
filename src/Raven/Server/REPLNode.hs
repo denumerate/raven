@@ -54,12 +54,13 @@ handleKill _ = getSelfPid >>=
 runPlot :: MVar (Interpreter ()) -> (ProcessId,PlotMsg) -> Process ()
 runPlot interpS (pid,pm@(PlotMsg n _ _)) = void $ spawnLocal
   (liftIO (readMVar interpS) >>=
-    (\interpS' -> liftIO (interpIO interpS' (buildPlotString pm)) >>=
+    (\interpS' -> liftIO (interpPlot interpS' (buildPlotString pm)) >>=
       (\out -> case out of
           Left err ->
             (Control.Distributed.Process.send pid . ProcessedMsg n) err
-          Right fname ->
-            Control.Distributed.Process.send pid (PlotDoneMsg n fname))))
+          Right fname -> liftIO (putStrLn (take 100 (show fname)))
+            --Control.Distributed.Process.send pid (PlotDoneMsg n fname)
+      )))
 
 -- |builds the string that is run by the interpreter from a PlotMsg
 buildPlotString :: PlotMsg -> String
