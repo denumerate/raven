@@ -3,6 +3,7 @@ module Raven.Server.Commands
   ( parseCommand
   )where
 
+import Network.Transport (ConnectionId)
 import Control.Distributed.Process
 import Crypto.Hash
 
@@ -21,7 +22,7 @@ import Raven.Server.NodeMsgs
 -- the servers pid then its own pid.
 -- help is a function that sends information on the command, needs its own pid,
 -- and the n value of the message.
-data Cmd = Cmd { parseFunc :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+data Cmd = Cmd { parseFunc :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
                , help :: ByteString
                }
 
@@ -70,20 +71,20 @@ cmdMap = Map.fromList
   ]
 
 -- |runs commands
-parseCommand :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseCommand :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseCommand server self msg@(n:cmd:_) =
   case Map.lookup cmd cmdMap of
     Just Cmd{parseFunc=f} -> f server self msg
-    _ -> send self $ ProcessedMsg n "Command not found"
+    _ -> send server $ ProcessedMsg n "Command not found"
 parseCommand server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
 
 -- |Parses a kill command
-parseKill :: ProcessId -> ProcessId -> [ByteString] -> Process ()
-parseKill server self [n,":kill"] = send server (self,KillMsg n)
-parseKill _ self (n:":kill":_) =
-  send self (ProcessedMsg n ":kill takes no arguments")
+parseKill :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
+parseKill server _ [n,":kill"] = send server $ KillMsg n
+parseKill server _ (n:":kill":_) =
+  send server (ProcessedMsg n ":kill takes no arguments")
 parseKill server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -96,12 +97,12 @@ helpKill =
   \with root access."
 
 -- |Parses a logon command
-parseLogon :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseLogon :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseLogon server self [n,":logon",name,pass] =
   send server (self,LoginMsg n  (Text.pack (B.unpack name))
                 (Text.pack (show (hash pass :: Digest SHA3_512))))
-parseLogon _ self (n:":logon":_) =
-  send self (ProcessedMsg n ":logon takes two arguments (username password)")
+parseLogon server _ (n:":logon":_) =
+  send server (ProcessedMsg n ":logon takes two arguments (username password)")
 parseLogon server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -113,10 +114,10 @@ helpLogon =
   \The command accepts two arguments, username and password."
 
 -- |Parses a repl? command
-parseReplq :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseReplq :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseReplq server self [n,":repl?"] = send server (self,REPLInfoMsg n)
-parseReplq _ self (n:":repl?":_) =
-  send self (ProcessedMsg n ":repl? takes no arguments")
+parseReplq server _ (n:":repl?":_) =
+  send server (ProcessedMsg n ":repl? takes no arguments")
 parseReplq server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -128,10 +129,10 @@ helpReplq =
   \The command accepts no arguments and requires a logged on user."
 
 -- |parse a logout command
-parseLogout :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseLogout :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseLogout server self [n,":logout"] = send server (self,LogoutMsg n)
-parseLogout _ self (n:":logout":_) =
-  send self (ProcessedMsg n ":logout takes no arguments")
+parseLogout server _ (n:":logout":_) =
+  send server (ProcessedMsg n ":logout takes no arguments")
 parseLogout server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -143,11 +144,11 @@ helpLogout =
   \The command accepts no arguments and requires a logged on user."
 
 -- |Parse a stop repl command
-parseStopRepl :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseStopRepl :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseStopRepl server self [n,":stoprepl"] =
   send server (self,StopREPLMSG n)
-parseStopRepl _ self (n:":stopRepl":_) =
-  send self (ProcessedMsg n ":stoprepl take no arguments")
+parseStopRepl server _ (n:":stopRepl":_) =
+  send server (ProcessedMsg n ":stoprepl take no arguments")
 parseStopRepl server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -160,10 +161,10 @@ helpStopRepl =
   \The command accepts no arguments and requires a logged on user."
 
 -- |parse the allUsers command
-parseAllUsers :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseAllUsers :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseAllUsers server self [n,":allUsers"] = send server (self,AllUsersMsg n)
-parseAllUsers _ self (n:":allUsers":_) =
-  send self (ProcessedMsg n ":allUsers accepts no arguments")
+parseAllUsers server _ (n:":allUsers":_) =
+  send server (ProcessedMsg n ":allUsers accepts no arguments")
 parseAllUsers server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -176,9 +177,9 @@ helpAllUsers =
   \root access."
 
 -- |parse the help command
-parseHelp :: Map ByteString Cmd -> ProcessId -> ProcessId -> [ByteString] -> Process ()
-parseHelp cMap _ self [n,":help"] =
-  send self $ ProcessedMsg n $ B.unpack $ foldl' helpConcat B.empty $
+parseHelp :: Map ByteString Cmd -> ProcessId -> ConnectionId -> [ByteString] -> Process ()
+parseHelp cMap server _ [n,":help"] =
+  send server $ ProcessedMsg n $ B.unpack $ foldl' helpConcat B.empty $
   Map.toList cMap
   where
     helpConcat acc (cmd,Cmd{help=help'}) =
@@ -188,8 +189,8 @@ parseHelp cMap _ self [n,":help"] =
                , help'
                , "\n"
                ]
-parseHelp cMap _ self (n:":help":cmds) =
-  send self $ ProcessedMsg n $ B.unpack $ foldl' helpConcat B.empty cmds
+parseHelp cMap server _ (n:":help":cmds) =
+  send server $ ProcessedMsg n $ B.unpack $ foldl' helpConcat B.empty cmds
   where
     helpConcat acc cmd = case Map.lookup cmd cMap of
       Just Cmd{help=help'} -> B.concat [ acc
@@ -213,7 +214,7 @@ helpHelp =
   \or takes a list of commands and searches for the accompanying information."
 
 -- |parse the addUsers command
-parseAddUser :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseAddUser :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseAddUser server self [n,":addUser",name,pass] =
   send server (self,AddUserMsg n (Text.pack (B.unpack name))
               (Text.pack (show (hash pass :: Digest SHA3_512))) False)
@@ -226,8 +227,8 @@ parseAddUser server self [n,":addUser",name,pass,root] =
                                 (Text.pack (show (hash pass :: Digest SHA3_512))) root')
     _ -> send server (self,AddUserMsg n (Text.pack (B.unpack name))
                        (Text.pack (show (hash pass :: Digest SHA3_512))) False)
-parseAddUser _ self (n:":addUser":_) =
-  send self (ProcessedMsg n ":addUser accepts [1,3] arguments")
+parseAddUser server _ (n:":addUser":_) =
+  send server (ProcessedMsg n ":addUser accepts [1,3] arguments")
 parseAddUser server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -246,13 +247,13 @@ helpAddUser =
   \This command requires a logged in user with root access."
 
 -- |parse a deleteUser command
-parseDeleteUser :: ProcessId -> ProcessId -> [ByteString] -> Process ()
-parseDeleteUser _ self [n,":deleteUser","root"] =
-  send self $ ProcessedMsg n "You cannot delete this user"
+parseDeleteUser :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
+parseDeleteUser server _ [n,":deleteUser","root"] =
+  send server $ ProcessedMsg n "You cannot delete this user"
 parseDeleteUser server self [n,":deleteUser",usr] =
   send server (self,DeleteUserMsg n $ Text.pack $ B.unpack usr)
-parseDeleteUser _ self (n:":deleteUser":_) =
-  send self $ ProcessedMsg n ":deleteUser takes one argument"
+parseDeleteUser server _ (n:":deleteUser":_) =
+  send server $ ProcessedMsg n ":deleteUser takes one argument"
 parseDeleteUser server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -265,13 +266,13 @@ helpDeleteUser =
   \root access."
 
 -- |parse a grantAccess command
-parseGrantAccess :: ProcessId -> ProcessId -> [ByteString] -> Process ()
-parseGrantAccess _ self [n,":grantAccess","root"] =
-  send self $ ProcessedMsg n "root has access by default"
+parseGrantAccess :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
+parseGrantAccess server _ [n,":grantAccess","root"] =
+  send server $ ProcessedMsg n "root has access by default"
 parseGrantAccess server self [n,":grantAccess",usr] =
   send server (self,ChangeRootAccessMsg n (Text.pack (B.unpack usr)) True)
-parseGrantAccess _ self (n:":grantAccess":_) =
-  send self $ ProcessedMsg n ":grantAccess takes one argument"
+parseGrantAccess server _ (n:":grantAccess":_) =
+  send server $ ProcessedMsg n ":grantAccess takes one argument"
 parseGrantAccess server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -284,13 +285,13 @@ helpGrantAccess =
   \root access."
 
 -- |parse a removeAccess command
-parseRemoveAccess :: ProcessId -> ProcessId -> [ByteString] -> Process ()
-parseRemoveAccess _ self [n,":removeAccess","root"] =
-  send self $ ProcessedMsg n "root cannot loose root access"
+parseRemoveAccess :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
+parseRemoveAccess server _ [n,":removeAccess","root"] =
+  send server $ ProcessedMsg n "root cannot loose root access"
 parseRemoveAccess server self [n,":removeAccess",usr] =
   send server (self,ChangeRootAccessMsg n (Text.pack (B.unpack usr)) False)
-parseRemoveAccess _ self (n:":removeAccess":_) =
-  send self $ ProcessedMsg n ":removeAccess takes one argument"
+parseRemoveAccess server _ (n:":removeAccess":_) =
+  send server $ ProcessedMsg n ":removeAccess takes one argument"
 parseRemoveAccess server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -303,13 +304,13 @@ helpRemoveAccess =
   \root access."
 
 -- |parse a changePassword command
-parseChangePassword :: ProcessId -> ProcessId -> [ByteString] -> Process ()
+parseChangePassword :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseChangePassword server self [n,":changePassword",name,new] =
   send server (self,ChangeUsersPasswordMsg n
                     (Text.pack (B.unpack name))
                     (Text.pack (show (hash new :: Digest SHA3_512))))
-parseChangePassword _ self (n:":changePassword":_) =
-  send self $ ProcessedMsg n ":changePassword takes two arguments"
+parseChangePassword server _ (n:":changePassword":_) =
+  send server $ ProcessedMsg n ":changePassword takes two arguments"
 parseChangePassword server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -323,12 +324,12 @@ helpChangePassword =
   \Changing a user's password requires a logged on user with root access."
 
 -- |parse a plot command
-parsePlot :: ProcessId -> ProcessId -> [ByteString] -> Process ()
-parsePlot _ self [n,":plot",_] = send self $
+parsePlot :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
+parsePlot server _ [n,":plot",_] = send server $
   ProcessedMsg n ":plot takes two arguments"
 parsePlot server self bs@(n:":plot":ptype:_) = send server
   (self, PlotMsg n (B.unpack ptype) (B.unpack (B.unwords (drop 3 bs))))
-parsePlot _ self (n:":plot":_) = send self $
+parsePlot server _ (n:":plot":_) = send server $
   ProcessedMsg n ":plot takes two arguments"
 parsePlot server _ _ =
   buildLogMsg "Command pattern match failed" >>=

@@ -20,13 +20,10 @@ import Raven.Server.REPLNode
 import Raven.Server.ResourceNode
 
 -- |Maps connections to user ids
-type ConnMap = Map ProcessId Text
+type ConnMap = Map ConnectionId Text
 
 -- |Maps users to their info (Access)
 type UserMap = Map Text (Bool,Maybe REPLNode)
-
--- |This is a guess as to what the value should be, documentation is unclear.
-connTimeout = 1800000000
 
 -- |Builds a server node and all internal processes
 newServerNode :: Transport -> EndPoint -> String -> IO ()
@@ -46,7 +43,6 @@ newServerNode trans end db = newLocalNode trans initRemoteTable >>=
                                    , match (handlePlot trans conMap uMap serverpid)
                                    , match (handleLog resNode)
                                    , match (handleLogin resNode)
-                                   -- , match (handlePlotDone resNode)
                                    , match (handleLoginSuc conMap uMap)
                                    , match (handleLogout conMap)
                                    , match (handleKill conMap uMap
@@ -66,61 +62,11 @@ newServerNode trans end db = newLocalNode trans initRemoteTable >>=
                         (liftIO . listenAtEnd trans end node Map.empty) lpid) >>
               return ()))))))
 
--- |Listen for and handle events from the endpoint.
--- The pid is the id of the node's listening process
-listenAtEnd :: Transport -> EndPoint -> LocalNode ->
-  Map ConnectionId (MVar ConnNode) -> ProcessId -> IO ()
-listenAtEnd trans end serverN conns pid = receive end >>=
-  (\event -> case event of
-      ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
-             (\cNode -> forkIO
-               (Network.Transport.connect end adrs reliabilty
-                (defaultConnectHints{connectTimeout = Just connTimeout}) >>=
-                 (\conn -> case conn of
-                     Right conn' -> newConnNode trans pid conn' >>=
-                           putMVar cNode
-                     Left err ->
-                       runProcess serverN
-                           (buildLogMsg
-                             ("Connection failed with " ++ show adrs
-                               ++ ". " ++ show err) >>=
-                             Control.Distributed.Process.send pid))) >>
-               listenAtEnd trans end serverN (Map.insert cid cNode conns) pid)
-      Received cid [info] -> forkIO
-             (case Map.lookup cid conns of
-                 Just conn -> let wds = B.words info in
-                                readMVar conn >>=
-                                handleReceived pid wds
-                 Nothing -> runProcess serverN
-                            (buildLogMsg "Connection not found in Map" >>=
-                             Control.Distributed.Process.send pid)) >>
-             listenAtEnd trans end serverN conns pid
-      ConnectionClosed cid -> readMVar (conns Map.! cid) >>=
-                              cleanConnNode >>
-                              listenAtEnd trans end serverN
-                              (Map.delete cid conns) pid
-      EndPointClosed -> putStrLn "EndPoint Closed" >>
-                        return (Map.map clean conns) >>
-                        return ()
-      ErrorEvent (TransportError _ err) ->
-        runProcess serverN
-          (buildLogMsg ("EndPoint Error: " ++ err) >>=
-            Control.Distributed.Process.send pid) >>
-             listenAtEnd trans end serverN conns pid
-      _ -> forkIO (runProcess serverN
-                   (buildLogMsg "Uncaught event at endpoint" >>=
-                    Control.Distributed.Process.send pid)) >>
-           listenAtEnd trans end serverN conns pid)
-  where
-    clean val =
-      readMVar val >>=
-      cleanConnNode
-
 -- |Handles a REPLMsg by looking for the users replNode (and handling errors)
 -- and then sending the message.
 -- If no node is found, one is created.
 handleREPL :: Transport -> MVar ConnMap -> MVar UserMap -> MVar ProcessId ->
-  (ProcessId,REPLMsg) -> Process ()
+  (ConnectionId,REPLMsg) -> Process ()
 handleREPL trans cMap uMap self msg@(cPID,REPLMsg n _) = void $ spawnLocal
   (liftIO (readMVar cMap) >>=
    return . Map.lookup cPID >>=
@@ -150,7 +96,7 @@ handleREPL trans cMap uMap self msg@(cPID,REPLMsg n _) = void $ spawnLocal
 -- and then sending the message.
 -- If no node is found, one is created.
 handlePlot :: Transport -> MVar ConnMap -> MVar UserMap -> MVar ProcessId ->
-  (ProcessId,PlotMsg) -> Process ()
+  (ConnectionId,PlotMsg) -> Process ()
 handlePlot trans cMap uMap self msg@(cPID,PlotMsg n _ _) = void $ spawnLocal
   (liftIO (readMVar cMap) >>=
    return . Map.lookup cPID >>=
@@ -180,21 +126,21 @@ handlePlot trans cMap uMap self msg@(cPID,PlotMsg n _ _) = void $ spawnLocal
 -- |Handles a KillMsg by first ensuring that the user sending it has root access,
 -- and then sending a kill message to all connected nodes.
 -- Then closes the transport layer.
-handleKill :: MVar ConnMap -> MVar UserMap -> Transport -> EndPoint ->
-  ResourceNode -> (ProcessId,KillMsg) -> Process ()
-handleKill cMap uMap trans end resNode (cPID,(KillMsg n)) =
+handleKill :: ProccessId -> MVar ConnMap -> MVar UserMap -> Transport -> EndPoint ->
+  ResourceNode -> (cPId,KillMsg) -> Process ()
+handleKill server cMap uMap trans end resNode (KillMsg n) =
   liftIO (readMVar cMap) >>=
   (\cMap' -> case Map.lookup cPID cMap' of
       Just id' -> liftIO (readMVar uMap) >>=
         (\uMap' -> case Map.lookup id' uMap' of
             Just (True,_) -> kill'
             Just (False,_) ->
-              Control.Distributed.Process.send cPID
-              (ProcessedMsg n "You cannot do that")
-            _ -> Control.Distributed.Process.send cPID
-              (ProcessedMsg n "Please Login"))
-      _ -> Control.Distributed.Process.send cPID
-           (ProcessedMsg n "Please Login"))
+              Control.Distributed.Process.send server
+              (cPID,ProcessedMsg n "You cannot do that")
+            _ -> Control.Distributed.Process.send server
+              (cPID,ProcessedMsg n "Please Login"))
+      _ -> Control.Distributed.Process.send server
+           (cPID,ProcessedMsg n "Please Login"))
   where kill' =
           liftIO (putStrLn "Killing server (40 seconds)") >>
           liftIO (readMVar resNode) >>=
@@ -220,18 +166,18 @@ handleLog rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
 
 -- |Handles a Login message by passing it on to the resource node.
-handleLogin :: ResourceNode -> (ProcessId,LoginMsg) -> Process ()
+handleLogin :: ResourceNode -> (ConnectionId,LoginMsg) -> Process ()
 handleLogin rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
 
 -- |Handles a PlotDone message by passing it on to the resource node.
-handlePlotDone :: ResourceNode -> (ProcessId,PlotDoneMsg) -> Process ()
+handlePlotDone :: ResourceNode -> (ConnectionId,PlotDoneMsg) -> Process ()
 handlePlotDone rNode msg = liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
 
 -- |Handles a successful login message by linking the connection to the user,
 -- and then linking the user to its users information.
-handleLoginSuc :: MVar ConnMap -> MVar UserMap -> (ProcessId,LoginSucMsg) ->
+handleLoginSuc :: MVar ConnMap -> MVar UserMap -> (ConnectionId,LoginSucMsg) ->
   Process ()
 handleLoginSuc cMap uMap (cPID,LoginSucMsg (id',rAcc)) = void $ spawnLocal
   (liftIO (takeMVar cMap) >>=
@@ -241,7 +187,7 @@ handleLoginSuc cMap uMap (cPID,LoginSucMsg (id',rAcc)) = void $ spawnLocal
 
 -- |Handles a logout message by removing the connection from the connection map,
 -- does not modify any user information.
-handleLogout :: MVar ConnMap -> (ProcessId,LogoutMsg) -> Process ()
+handleLogout :: MVar ConnMap -> (ConnectionId,LogoutMsg) -> Process ()
 handleLogout cMap (cPID,LogoutMsg n) = void $ spawnLocal
   (liftIO (takeMVar cMap) >>=
    liftIO . putMVar cMap . Map.delete cPID >>
@@ -249,7 +195,7 @@ handleLogout cMap (cPID,LogoutMsg n) = void $ spawnLocal
     (ProcessedMsg n "Logged Out"))
 
 -- |Handles a REPLInfoMsg by sending back if the user has an existing REPLNode
-handleREPLInfo :: MVar ConnMap -> MVar UserMap -> (ProcessId,REPLInfoMsg) ->
+handleREPLInfo :: MVar ConnMap -> MVar UserMap -> (ConnectionId,REPLInfoMsg) ->
   Process ()
 handleREPLInfo cMap uMap (cPID,REPLInfoMsg n) = void $ spawnLocal
   (liftIO (readMVar cMap) >>=
@@ -270,7 +216,7 @@ handleREPLInfo cMap uMap (cPID,REPLInfoMsg n) = void $ spawnLocal
              (ProcessedMsg n "Please Login")
 
 -- |Handles a StopREPLMSG by killing the connected repl node (if existing)
-handleStopREPL :: MVar ConnMap -> MVar UserMap -> (ProcessId,StopREPLMSG) ->
+handleStopREPL :: MVar ConnMap -> MVar UserMap -> (ConnectionId,StopREPLMSG) ->
   Process ()
 handleStopREPL cMap uMap (cPID,StopREPLMSG n) = void $ spawnLocal
   (liftIO (readMVar cMap) >>=
@@ -320,9 +266,10 @@ handleAllUsers cMap uMap rNode msg@(cPID,AllUsersMsg n) = void $ spawnLocal
 
 -- |Handles an AddUserMsg by checking user permissions and then passing
 -- the message on if allowed.
-handleAddUser :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
-  (ProcessId,AddUserMsg) -> Process ()
-handleAddUser cMap uMap rNode msg@(cPID,AddUserMsg n _ _ _) = void $ spawnLocal
+handleAddUser :: ProcessId -> MVar ConnMap -> MVar UserMap -> ResourceNode ->
+  (ConnectionId,AddUserMsg) -> Process ()
+handleAddUser server cMap uMap rNode msg@(cPID,AddUserMsg n _ _ _) =
+  void $ spawnLocal
   (liftIO (readMVar cMap) >>=
    return . Map.lookup cPID >>=
    (\cMap' -> case cMap' of
@@ -333,19 +280,20 @@ handleAddUser cMap uMap rNode msg@(cPID,AddUserMsg n _ _ _) = void $ spawnLocal
              Just (True,_) ->
                liftIO (readMVar rNode) >>=
                (`Control.Distributed.Process.send` msg)
-             Just (False,_) -> Control.Distributed.Process.send cPID
-                                (ProcessedMsg n "You do not have root access")
+             Just (False,_) -> Control.Distributed.Process.send server
+                                (cPID,ProcessedMsg n "You do not have root access")
              _ -> failed)
        _ -> failed))
   where
-    failed = Control.Distributed.Process.send cPID
-             (ProcessedMsg n "Please Login")
+    failed = Control.Distributed.Process.send server
+             (cPID,ProcessedMsg n "Please Login")
 
 -- |Handles an deleteUserMsg by checking user permissions and then passing
 -- the message on if allowed.
-handleDeleteUser :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
-  (ProcessId,DeleteUserMsg) -> Process ()
-handleDeleteUser cMap uMap rNode msg@(cPID,DeleteUserMsg n _) = void $ spawnLocal
+handleDeleteUser :: ProcessId -> MVar ConnMap -> MVar UserMap -> ResourceNode ->
+  (ConnectionId,DeleteUserMsg) -> Process ()
+handleDeleteUser server cMap uMap rNode msg@(cPID,DeleteUserMsg n _) =
+  void $ spawnLocal
   (liftIO (readMVar cMap) >>=
    return . Map.lookup cPID >>=
    (\cMap' -> case cMap' of
@@ -356,38 +304,41 @@ handleDeleteUser cMap uMap rNode msg@(cPID,DeleteUserMsg n _) = void $ spawnLoca
              Just (True,_) ->
                liftIO (readMVar rNode) >>=
                (`Control.Distributed.Process.send` msg)
-             Just (False,_) -> Control.Distributed.Process.send cPID
-                                (ProcessedMsg n "You do not have root access")
+             Just (False,_) -> Control.Distributed.Process.send server
+                                (cPID,ProcessedMsg n "You do not have root access")
              _ -> failed)
        _ -> failed))
   where
-    failed = Control.Distributed.Process.send cPID
-             (ProcessedMsg n "Please Login")
+    failed = Control.Distributed.Process.send server
+             (cPID,ProcessedMsg n "Please Login")
 
 -- |Handles a DeleteUserSucc message by removing the id from the map and then
 -- sending a message to the connNode.
-handleDeleteUserSucc :: MVar UserMap -> (ProcessId,DeleteUserSuccMsg) ->
-  Process ()
-handleDeleteUserSucc uMap (cPID,DeleteUserSuccMsg n id') = void $ spawnLocal
+handleDeleteUserSucc :: ProcessId -> MVar UserMap ->
+  (ConnectionId,DeleteUserSuccMsg) -> Process ()
+handleDeleteUserSucc server uMap (cPID,DeleteUserSuccMsg n id') = void $ spawnLocal
   (liftIO (takeMVar uMap) >>=
     (\uMap' -> return (Map.lookup id' uMap') >>=
       (\user -> case user of
           Just (_,Just rNode) -> liftIO (readMVar rNode) >>=
             (`Control.Distributed.Process.send` (KillMsg "")) >>
-            Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+            Control.Distributed.Process.send server
+                (cPID,ProcessedMsg n "User deleted") >>
             liftIO (putMVar uMap (Map.delete id' uMap'))
           Just _ ->
-            Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+            Control.Distributed.Process.send server
+                (cPID,ProcessedMsg n "User deleted") >>
             liftIO (putMVar uMap (Map.delete id' uMap'))
           _ ->
-            Control.Distributed.Process.send cPID (ProcessedMsg n "User deleted") >>
+            Control.Distributed.Process.send server
+                (cPID,ProcessedMsg n "User deleted") >>
             liftIO (putMVar uMap uMap'))))
 
 -- |Handles an changeRootAccessMsg by checking user permissions and then passing
 -- the message on if allowed.
-handleChangeRootAccess :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
-  (ProcessId,ChangeRootAccessMsg) -> Process ()
-handleChangeRootAccess cMap uMap rNode msg@(cPID,ChangeRootAccessMsg n _ _) =
+handleChangeRootAccess :: ProcessId -> MVar ConnMap -> MVar UserMap -> ResourceNode ->
+  (ConnectionId,ChangeRootAccessMsg) -> Process ()
+handleChangeRootAccess server cMap uMap rNode msg@(cPID,ChangeRootAccessMsg n _ _) =
   void $ spawnLocal
   (liftIO (readMVar cMap) >>=
    return . Map.lookup cPID >>=
@@ -399,36 +350,36 @@ handleChangeRootAccess cMap uMap rNode msg@(cPID,ChangeRootAccessMsg n _ _) =
              Just (True,_) ->
                liftIO (readMVar rNode) >>=
                (`Control.Distributed.Process.send` msg)
-             Just (False,_) -> Control.Distributed.Process.send cPID
-                                (ProcessedMsg n "You do not have root access")
+             Just (False,_) -> Control.Distributed.Process.send server
+                                (cPID,ProcessedMsg n "You do not have root access")
              _ -> failed)
        _ -> failed))
   where
-    failed = Control.Distributed.Process.send cPID
-             (ProcessedMsg n "Please Login")
+    failed = Control.Distributed.Process.send server
+             (cPID,ProcessedMsg n "Please Login")
 
 -- |Handles a RootAccessChangedMsg message by updating the usermap and then
 -- sending a message to the connNode.
-handleRootAccessChanged :: MVar UserMap -> (ProcessId,RootAccessChangedMsg) ->
-  Process ()
-handleRootAccessChanged uMap (cPID,RootAccessChangedMsg n id' rAcc) = void $ spawnLocal
-  (liftIO (takeMVar uMap) >>=
+handleRootAccessChanged :: ProcessId -> MVar UserMap ->
+  (ConnectionId,RootAccessChangedMsg) -> Process ()
+handleRootAccessChanged server uMap (cPID,RootAccessChangedMsg n id' rAcc) =
+  void $ spawnLocal (liftIO (takeMVar uMap) >>=
     (\uMap' -> return (Map.lookup id' uMap') >>=
       (\user -> case user of
           Just (_,node) ->
-            Control.Distributed.Process.send cPID
-                (ProcessedMsg n "User information updated") >>
+            Control.Distributed.Process.send server
+                (cPID,ProcessedMsg n "User information updated") >>
             liftIO (putMVar uMap (Map.insert id' (rAcc,node) uMap'))
           _ ->
-            Control.Distributed.Process.send cPID
-                (ProcessedMsg n "User information updated") >>
+            Control.Distributed.Process.send server
+                (cPID,ProcessedMsg n "User information updated") >>
             liftIO (putMVar uMap uMap'))))
 
 -- |Handles a ChangeUsersPasswordMsg by checking user permissions and then passing
 -- the message on if allowed.
-handleChangeUsersPassword :: MVar ConnMap -> MVar UserMap -> ResourceNode ->
-  (ProcessId,ChangeUsersPasswordMsg) -> Process ()
-handleChangeUsersPassword cMap uMap rNode msg@(cPID,ChangeUsersPasswordMsg n _ _) =
+handleChangeUsersPassword :: ProcessId -> MVar ConnMap -> MVar UserMap ->
+  ResourceNode -> (ConnectionId,ChangeUsersPasswordMsg) -> Process ()
+handleChangeUsersPassword server cMap uMap rNode msg@(cPID,ChangeUsersPasswordMsg n _ _) =
   void $ spawnLocal
   (liftIO (readMVar cMap) >>=
    return . Map.lookup cPID >>=
@@ -440,10 +391,10 @@ handleChangeUsersPassword cMap uMap rNode msg@(cPID,ChangeUsersPasswordMsg n _ _
              Just (True,_) ->
                liftIO (readMVar rNode) >>=
                (`Control.Distributed.Process.send` msg)
-             Just (False,_) -> Control.Distributed.Process.send cPID
-                                (ProcessedMsg n "You do not have root access")
+             Just (False,_) -> Control.Distributed.Process.send server
+                                (cPID,ProcessedMsg n "You do not have root access")
              _ -> failed)
        _ -> failed))
   where
-    failed = Control.Distributed.Process.send cPID
-             (ProcessedMsg n "Please Login")
+    failed = Control.Distributed.Process.send server
+             (cPID,ProcessedMsg n "Please Login")

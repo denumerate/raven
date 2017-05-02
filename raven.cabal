@@ -23,7 +23,7 @@ executable raven
                        Raven.Server.Commands
                        Raven.Server.NodeMsgs
                        Raven.Server.ServerNode
-                       Raven.Server.ConnNode
+                       Raven.Server.Connection
                        Raven.Server.REPLNode
                        Raven.Server.ResourceNode
                        Raven.Client

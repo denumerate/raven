@@ -1,46 +1,62 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Raven.Server.ConnNode
-  ( ConnNode
-  , newConnNode
+module Raven.Server.Connection
+  ( listenAtEnd
   , handleReceived
-  , cleanConnNode
+  , sendResult
   )where
 
 import Network.Transport
 import Control.Distributed.Process
 import Control.Distributed.Process.Node
 import Control.Concurrent
-import Control.Monad (forever,void)
 
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy as LB
-
-import System.Directory
-import Codec.Picture
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 import Raven.Server.NodeMsgs
 import Raven.Server.Commands
 
--- |Stores the node and the id of the listen process
-type ConnNode = (LocalNode,MVar ProcessId)
+-- |This is a guess as to what the value should be, documentation is unclear.
+connTimeout :: Int
+connTimeout = 1800000000
 
--- |Builds and returns node to handle connections.
--- Needs the transport layer, server id, and the established connection
-newConnNode :: Transport -> ProcessId -> Connection -> IO ConnNode
-newConnNode trans server conn = newEmptyMVar >>=
-  (\pid -> newLocalNode trans initRemoteTable >>=
-    (\connNode ->
-       runProcess connNode
-       (spawnLocal (forever (receiveWait
-                              [ match (sendResult conn server)
-                              , match (handlePlotDone conn server)
-                              , match (handleLog server)
-                              , match (handleKill conn)
-                              , matchUnknown (catchAllMsgs server "ConnNode")
-                              ])) >>=
-         liftIO . putMVar pid) >>
-        return (connNode,pid)))
+-- |Listen for and handle events from the endpoint.
+-- The pid is the id of the node's listening process
+listenAtEnd :: Transport -> EndPoint -> LocalNode ->
+  Map ConnectionId (MVar Connection) -> ProcessId -> IO ()
+listenAtEnd trans end serverN conns pid = receive end >>=
+  (\event -> case event of
+      ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
+             (\cNode -> forkIO
+               (Network.Transport.connect end adrs reliabilty
+                (defaultConnectHints{connectTimeout = Just connTimeout}) >>=
+                 (\conn -> case conn of
+                     Right conn' -> putMVar cNode conn'
+                     Left err ->
+                       runProcess serverN
+                           (buildLogMsg
+                             ("Connection failed with " ++ show adrs
+                               ++ ". " ++ show err) >>=
+                             Control.Distributed.Process.send pid))) >>
+               listenAtEnd trans end serverN (Map.insert cid cNode conns) pid)
+      Received cid [info] -> forkIO
+             (let wds = B.words info in
+                 runProcess serverN (handleReceived pid wds cid)) >>
+             listenAtEnd trans end serverN conns pid
+      ConnectionClosed cid -> listenAtEnd trans end serverN
+                              (Map.delete cid conns) pid
+      EndPointClosed -> putStrLn "EndPoint Closed"
+      ErrorEvent (TransportError _ err) ->
+        runProcess serverN
+          (buildLogMsg ("EndPoint Error: " ++ err) >>=
+            Control.Distributed.Process.send pid) >>
+             listenAtEnd trans end serverN conns pid
+      _ -> forkIO (runProcess serverN
+                   (buildLogMsg "Uncaught event at endpoint" >>=
+                    Control.Distributed.Process.send pid)) >>
+           listenAtEnd trans end serverN conns pid)
 
 -- |Takes the result of the servers work and sends it back to the client
 sendResult :: Connection -> ProcessId -> ProcessedMsg -> Process ()
@@ -60,55 +76,13 @@ handleSent server result = case result of
 
 -- |Handles the data send by a received event
 -- needs the servers process id
-handleReceived :: ProcessId -> [ByteString] -> ConnNode -> IO ()
+handleReceived :: ProcessId -> [ByteString] -> ConnectionId -> Process ()
 handleReceived _ [_] _ = return ()
-handleReceived pid cmd@(n:msg) (connNode,self) = readMVar self >>=
-  (\self' -> if B.isPrefixOf ":" (head msg)
-    then runProcess connNode (parseCommand pid self' cmd)
-    else runProcess connNode
-         (Control.Distributed.Process.send pid (self',REPLMsg n
-                                                 (B.unpack (B.unwords msg)))))
-handleReceived pid msg (connNode,_) = runProcess connNode
-  (buildLogMsg
+handleReceived pid cmd@(n:msg) self =
+  if B.isPrefixOf ":" (head msg)
+    then parseCommand pid self cmd
+    else Control.Distributed.Process.send pid (self,REPLMsg n
+                                                (B.unpack (B.unwords msg)))
+handleReceived pid msg _ =buildLogMsg
    ("Received, not recognized message from outside connection: " ++ show msg) >>=
-   Control.Distributed.Process.send pid)
-
--- |Handle a kill message by killing the node
-handleKill :: Connection -> KillMsg -> Process ()
-handleKill conn _ = liftIO (close conn) >>
-  getSelfPid >>= (`exit` ("Clean" :: ByteString))
-
--- |Tells the listening process on a connNode to exit
-cleanConnNode :: ConnNode -> IO ()
-cleanConnNode (connNode,self) = readMVar self >>=
-  (\self' -> runProcess connNode
-    (Control.Distributed.Process.send self' (KillMsg "")))
-
--- |Handle a LogMsg by sending it to the supplied processId.
--- Process should be the server node.
-handleLog :: ProcessId -> LogMsg -> Process ()
-handleLog = Control.Distributed.Process.send
-
--- |Handles a PlotDoneMsg by sending a serialized version of the image to the user
--- and then removing the file
-handlePlotDone :: Connection -> ProcessId -> PlotDoneMsg -> Process ()
-handlePlotDone conn server (PlotDoneMsg n fname) =
-  let fname' = ".raven/plots/" ++ fname
-  in void $ spawnLocal
-     (liftIO (doesFileExist fname') >>=
-       (\exists -> if exists then liftIO (readImage fname') >>=
-         (\img -> case img of
-             Left str ->
-               liftIO (Network.Transport.send conn [n," ",B.pack str]) >>=
-               handleSent server
-             Right img' -> case encodeDynamicBitmap img' of
-               Left str ->
-                 liftIO (Network.Transport.send conn [n," ",B.pack str]) >>=
-                 handleSent server
-               Right bstring ->
-                 liftIO (Network.Transport.send conn [n," ",LB.toStrict bstring]) >>=
-                 handleSent server) >>
-         liftIO (removeFile fname')
-                   else
-                     liftIO (Network.Transport.send conn [n," ","File Error"]) >>=
-                     handleSent server))
+   Control.Distributed.Process.send pid
