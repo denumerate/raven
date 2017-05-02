@@ -101,8 +101,8 @@ parseLogon :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseLogon server self [n,":logon",name,pass] =
   send server (self,LoginMsg n  (Text.pack (B.unpack name))
                 (Text.pack (show (hash pass :: Digest SHA3_512))))
-parseLogon server _ (n:":logon":_) =
-  send server (ProcessedMsg n ":logon takes two arguments (username password)")
+parseLogon server self (n:":logon":_) =
+  send server (self,ProcessedMsg n ":logon takes two arguments (username password)")
 parseLogon server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -116,8 +116,8 @@ helpLogon =
 -- |Parses a repl? command
 parseReplq :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseReplq server self [n,":repl?"] = send server (self,REPLInfoMsg n)
-parseReplq server _ (n:":repl?":_) =
-  send server (ProcessedMsg n ":repl? takes no arguments")
+parseReplq server self (n:":repl?":_) =
+  send server (self,ProcessedMsg n ":repl? takes no arguments")
 parseReplq server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
@@ -131,8 +131,8 @@ helpReplq =
 -- |parse a logout command
 parseLogout :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseLogout server self [n,":logout"] = send server (self,LogoutMsg n)
-parseLogout server _ (n:":logout":_) =
-  send server (ProcessedMsg n ":logout takes no arguments")
+parseLogout server self (n:":logout":_) =
+  send server (self,ProcessedMsg n ":logout takes no arguments")
 parseLogout server _ _ =
   buildLogMsg "Command pattern match failed" >>=
   send server
