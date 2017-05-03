@@ -8,8 +8,6 @@ module Raven.Server.NodeMsgs
   , LoginSucMsg(..)
   , NewTokenMsg(..)
   , LogoutMsg(..)
-  , REPLInfoMsg(..)
-  , StopREPLMSG(..)
   , AllUsersMsg(..)
   , AddUserMsg(..)
   , DeleteUserMsg(..)
@@ -18,12 +16,13 @@ module Raven.Server.NodeMsgs
   , RootAccessChangedMsg(..)
   , ChangeUsersPasswordMsg(..)
   , PlotMsg(..)
-  , PlotDoneMsg(..)
+  , ConnClosed(..)
   , buildLogMsg
   , catchAllMsgs
   , catchAllMsgs'
   ) where
 
+import Network.Transport (ConnectionId)
 import Control.Distributed.Process
 import Control.Concurrent
 
@@ -63,12 +62,6 @@ data NewTokenMsg = NewTokenMsg !(Text,Text)
 data LogoutMsg = LogoutMsg !ByteString
   deriving (Generic,Binary,Typeable)
 
-data REPLInfoMsg = REPLInfoMsg !ByteString
-  deriving (Generic,Binary,Typeable)
-
-data StopREPLMSG = StopREPLMSG !ByteString
-  deriving (Generic,Binary,Typeable)
-
 data AllUsersMsg = AllUsersMsg !ByteString
   deriving (Generic,Binary,Typeable)
 
@@ -98,8 +91,7 @@ data ChangeUsersPasswordMsg = ChangeUsersPasswordMsg !ByteString !Text !Text
 data PlotMsg = PlotMsg !ByteString !String !String
   deriving (Generic,Binary,Typeable)
 
--- |n filename
-data PlotDoneMsg = PlotDoneMsg !ByteString !String
+data ConnClosed = ConnClosed ConnectionId
   deriving (Generic,Binary,Typeable)
 
 -- |Standardized LogMsg

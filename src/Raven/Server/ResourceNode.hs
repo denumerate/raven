@@ -38,11 +38,11 @@ newResourceNode trans server dbAddr =
                                  [ match (handleLog logH)
                                  , match (handleLogin server db)
                                  , match (handleKill logH db)
-                                 , match (handleAllUsers db)
-                                 , match (handleAddUser db)
+                                 , match (handleAllUsers server db)
+                                 , match (handleAddUser server db)
                                  , match (handleDeleteUser db server)
                                  , match (handleChangeRootAccess db server)
-                                 , match (handleChangeUsersPassword db)
+                                 , match (handleChangeUsersPassword server db)
                                  , matchUnknown (catchAllMsgs' pid "ResourceNode")
                                  ])) >>=
             liftIO . putMVar pid) >>
@@ -74,70 +74,90 @@ cleanFiles = removeDirectoryRecursive ".raven/plots"
 -- |Handles a login message by sending a request to the database that makes sure
 -- the user exists and then makes sure that the returned data has the right information.
 -- Also sends a message to the connection node regarding success/failure
-handleLogin :: MVar ProcessId -> DB.Pipe -> (ProcessId,LoginMsg) -> Process ()
+handleLogin :: MVar ProcessId -> DB.Pipe -> (ConnectionId,LoginMsg) -> Process ()
 handleLogin server p (cPID,LoginMsg n name pass) = void $ spawnLocal
   (liftIO (readMVar server) >>=
    (\server' -> liftIO (checkUser p name pass) >>=
      (\ret -> case ret of
          (Just (Left info)) ->
-           Control.Distributed.Process.send server' (cPID,LoginSucMsg info) >>
-           Control.Distributed.Process.send cPID (ProcessedMsg n "Login Successful")
+           Control.Distributed.Process.send server'
+              (cPID,LoginSucMsg info) >>
+           Control.Distributed.Process.send server'
+              (cPID,ProcessedMsg n "Login Successful")
          (Just (Right err)) -> buildLogMsg err >>=
            Control.Distributed.Process.send server' >>
-           Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed")
-         _ -> Control.Distributed.Process.send cPID (ProcessedMsg n "Login Failed"))))
+           Control.Distributed.Process.send server'
+              (cPID,ProcessedMsg n "Login Failed")
+         _ -> Control.Distributed.Process.send server'
+           (cPID,ProcessedMsg n "Login Failed"))))
 
 -- |Handles an allUsers message by asking the database for all users, formatting them,
 -- and sending them back to the connection node.
-handleAllUsers :: DB.Pipe -> (ProcessId,AllUsersMsg) -> Process ()
-handleAllUsers p (cPID,AllUsersMsg n) = void $ spawnLocal
-  (liftIO (getAllUsers p) >>=
-   Control.Distributed.Process.send cPID . ProcessedMsg n)
+handleAllUsers :: MVar ProcessId -> DB.Pipe -> (ConnectionId,AllUsersMsg) ->
+  Process ()
+handleAllUsers server p (cPID,AllUsersMsg n) = void $ spawnLocal
+  (liftIO (readMVar server)>>=
+   (\server' ->
+      liftIO (getAllUsers p) >>=
+      (\res ->
+         Control.Distributed.Process.send server' (cPID,ProcessedMsg n res))))
 
 -- |Handles an addUser message by asking the database to add a user and sending
 -- the result back to the connNode.
-handleAddUser :: DB.Pipe -> (ProcessId,AddUserMsg) -> Process ()
-handleAddUser p (cPID,AddUserMsg n name pswd rAcc) = void $ spawnLocal
-  (liftIO (addUser p name pswd rAcc) >>=
-   Control.Distributed.Process.send cPID . ProcessedMsg n)
+handleAddUser :: MVar ProcessId -> DB.Pipe -> (ConnectionId,AddUserMsg) ->
+  Process ()
+handleAddUser server p (cPID,AddUserMsg n name pswd rAcc) = void $ spawnLocal
+  (liftIO (readMVar server) >>=
+   (\server' ->
+      liftIO (addUser p name pswd rAcc) >>=
+      (\res ->
+         Control.Distributed.Process.send server' (cPID,ProcessedMsg n res))))
 
 -- |Handles a delete user message by asking the database to remove the user.
 -- If successful, tell the severnode, if not, tells connNode
-handleDeleteUser :: DB.Pipe -> MVar ProcessId -> (ProcessId,DeleteUserMsg) ->
+handleDeleteUser :: DB.Pipe -> MVar ProcessId -> (ConnectionId,DeleteUserMsg) ->
   Process ()
 handleDeleteUser p server (cPID,DeleteUserMsg n name) = void $ spawnLocal
-  (liftIO (deleteUser p name) >>=
-   (\out -> case out of
-       Just id' -> liftIO (readMVar server) >>=
-         (`Control.Distributed.Process.send` (cPID,DeleteUserSuccMsg n id'))
-       _ -> Control.Distributed.Process.send cPID
-         (ProcessedMsg n "User not found")))
+  (liftIO (readMVar server) >>=
+   (\server' ->
+      liftIO (deleteUser p name) >>=
+      (\out -> case out of
+          Just id' ->
+            Control.Distributed.Process.send server'
+               (cPID,DeleteUserSuccMsg n id')
+          _ -> Control.Distributed.Process.send server'
+            (cPID,ProcessedMsg n "User not found"))))
 
 -- |Handles an updateusersaccess message by asking the database to find and
 -- update the user.
 -- If successful, tell the severnode, if not, tells connNode
 handleChangeRootAccess :: DB.Pipe -> MVar ProcessId ->
-  (ProcessId,ChangeRootAccessMsg) -> Process ()
+  (ConnectionId,ChangeRootAccessMsg) -> Process ()
 handleChangeRootAccess p server (cPID,ChangeRootAccessMsg n name rAcc) =
   void $ spawnLocal
-  (liftIO (updateUsersAccess p name rAcc) >>=
-    (\out -> case out of
-        Just id' -> liftIO (readMVar server) >>=
-          (`Control.Distributed.Process.send` (cPID,RootAccessChangedMsg n id' rAcc))
-        _ -> Control.Distributed.Process.send cPID
-          (ProcessedMsg n "User not found")))
+  (liftIO (readMVar server) >>=
+   (\server' ->
+      liftIO (updateUsersAccess p name rAcc) >>=
+      (\out -> case out of
+          Just id' ->
+            Control.Distributed.Process.send server'
+               (cPID,RootAccessChangedMsg n id' rAcc)
+          _ -> Control.Distributed.Process.send server'
+            (cPID,ProcessedMsg n "User not found"))))
 
 -- |Handles a ChangeUsersPasswordMsg by asking the database to find and
 -- update the user.
 -- Tells the connNode the result.
-handleChangeUsersPassword :: DB.Pipe -> (ProcessId, ChangeUsersPasswordMsg) ->
-  Process ()
-handleChangeUsersPassword p (cPID, ChangeUsersPasswordMsg n name pswd) =
+handleChangeUsersPassword :: MVar ProcessId -> DB.Pipe ->
+  (ConnectionId, ChangeUsersPasswordMsg) -> Process ()
+handleChangeUsersPassword server p (cPID, ChangeUsersPasswordMsg n name pswd) =
   void $ spawnLocal
-  (liftIO (updateUsersPassword p name pswd) >>=
-    (\out -> case out of
-        Just _ ->
-          Control.Distributed.Process.send cPID $
-             ProcessedMsg n "Password Changed"
-        _ -> Control.Distributed.Process.send cPID
-          (ProcessedMsg n "User not found")))
+  (liftIO (readMVar server) >>=
+   (\server' ->
+      liftIO (updateUsersPassword p name pswd) >>=
+      (\out -> case out of
+          Just _ ->
+            Control.Distributed.Process.send server'
+               (cPID,ProcessedMsg n "Password Changed")
+          _ -> Control.Distributed.Process.send server'
+               (cPID,ProcessedMsg n "User not found"))))
