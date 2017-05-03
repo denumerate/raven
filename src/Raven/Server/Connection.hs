@@ -50,6 +50,8 @@ listenAtEnd trans end serverN conns pid = receive end >>=
       ConnectionClosed cid ->
         takeMVar conns >>=
         putMVar conns . Map.delete cid >>
+        runProcess serverN
+             (Control.Distributed.Process.send pid (ConnClosed cid)) >>
         listenAtEnd trans end serverN conns pid
       EndPointClosed -> putStrLn "EndPoint Closed"
       ErrorEvent (TransportError _ err) ->

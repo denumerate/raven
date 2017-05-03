@@ -301,3 +301,14 @@ handleChangeUsersPassword server cMap uMap rNode msg@(cPID,ChangeUsersPasswordMs
   where
     failed server' = Control.Distributed.Process.send server'
              (cPID,ProcessedMsg n "Please Login")
+
+-- |Handles a ConnClossed message by scrubbing the user.
+handleConnClosed :: MVar ConnMap -> MVar UserMap -> ConnClosed -> Process ()
+handleConnClosed cMap uMap (ConnClosed cid) = void $ spawnLocal $
+  liftIO (takeMVar cMap) >>=
+  (\cMap' -> case Map.lookup cid cMap' of
+      Just uid ->
+        liftIO (putMVar cMap (Map.delete cid cMap')) >>
+        liftIO (takeMVar uMap) >>=
+        liftIO . putMVar uMap . Map.delete uid
+      _ -> liftIO (putMVar cMap cMap'))
