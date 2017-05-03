@@ -106,6 +106,6 @@ handleReceived pid cmd@(n:msg) self =
     then parseCommand pid self cmd
     else Control.Distributed.Process.send pid (self,REPLMsg n
                                                 (B.unpack (B.unwords msg)))
-handleReceived pid msg _ =buildLogMsg
+handleReceived pid msg _ = buildLogMsg
    ("Received, not recognized message from outside connection: " ++ show msg) >>=
    Control.Distributed.Process.send pid

@@ -93,7 +93,7 @@ handleREPL trans cMap uMap self msg@(cPID,REPLMsg n _) = void $ spawnLocal
   where
     failed = liftIO (readMVar self) >>=
              (`Control.Distributed.Process.send`
-               ProcessedMsg n "Please Login")
+               (cPID,ProcessedMsg n "Please Login"))
 
 -- |Handles a PlotMsg by looking for the users replNode (and handling errors)
 -- and then sending the message.
@@ -123,7 +123,7 @@ handlePlot trans cMap uMap self msg@(cPID,PlotMsg n _ _) = void $ spawnLocal
   where
     failed = liftIO (readMVar self) >>=
       (`Control.Distributed.Process.send`
-        ProcessedMsg n "Please Login")
+        (cPID,ProcessedMsg n "Please Login"))
 
 
 -- |Handles a KillMsg by first ensuring that the user sending it has root access,

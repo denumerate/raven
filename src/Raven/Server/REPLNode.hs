@@ -26,9 +26,9 @@ newREPLNode trans server = newEmptyMVar >>=
       (\replNode ->
          runProcess replNode
         (spawnLocal (forever (receiveWait
-                              [ match (runREPL interpS)
+                              [ match (runREPL interpS server)
                               , match handleKill
-                              , match (runPlot interpS)
+                              , match (runPlot interpS server)
                               , matchUnknown (catchAllMsgs' server "REPLNode")
                               ])) >>=
          liftIO . putMVar pid) >>
@@ -37,11 +37,16 @@ newREPLNode trans server = newEmptyMVar >>=
 
 -- |matches to a REPLmsg and runs the repl on the sent string.
 -- Sends back a ProcessedMsg to the connection
-runREPL :: MVar (Interpreter ()) -> (ProcessId,REPLMsg) -> Process ()
-runREPL interpS (pid,REPLMsg n value) = void $ spawnLocal
-  (liftIO (readMVar interpS) >>=
-   (\interpS' -> liftIO (interp interpS' value)) >>=
-    Control.Distributed.Process.send pid . ProcessedMsg n)
+runREPL :: MVar (Interpreter ()) -> MVar ProcessId ->
+  (ConnectionId,REPLMsg) -> Process ()
+runREPL interpS server (pid,REPLMsg n value) = void $ spawnLocal
+  (liftIO (readMVar server) >>=
+   (\server' ->
+      liftIO (readMVar interpS) >>=
+      (\interpS' -> liftIO (interp interpS' value)) >>=
+      (\res ->
+         Control.Distributed.Process.send server'
+         (pid,ProcessedMsg n res))))
 
 -- |Handles a kill message by killing the node
 handleKill :: KillMsg -> Process ()
@@ -51,16 +56,19 @@ handleKill _ = getSelfPid >>=
 -- |matches to a PlotMsg and runs the repl on the sent string.
 -- If successful, sends off the PlotMsg to the resource node to get the image,
 -- otherwise sends back errors.
-runPlot :: MVar (Interpreter ()) -> (ProcessId,PlotMsg) -> Process ()
-runPlot interpS (pid,pm@(PlotMsg n _ _)) = void $ spawnLocal
-  (liftIO (readMVar interpS) >>=
-    (\interpS' -> liftIO (interpPlot interpS' (buildPlotString pm)) >>=
-      (\out -> case out of
-          Left err ->
-            (Control.Distributed.Process.send pid . ProcessedMsg n) err
-          Right fname -> liftIO (putStrLn (take 100 (show fname)))
+runPlot :: MVar (Interpreter ()) -> MVar ProcessId ->
+  (ConnectionId,PlotMsg) -> Process ()
+runPlot interpS server (pid,pm@(PlotMsg n _ _)) = void $ spawnLocal
+  (liftIO (readMVar server) >>=
+   (\server' ->
+      liftIO (readMVar interpS) >>=
+      (\interpS' -> liftIO (interpPlot interpS' (buildPlotString pm)) >>=
+        (\out -> case out of
+            Left err ->
+              Control.Distributed.Process.send server' (pid,ProcessedMsg n err)
+            Right fname -> liftIO (putStrLn (take 100 (show fname)))
             --Control.Distributed.Process.send pid (PlotDoneMsg n fname)
-      )))
+        ))))
 
 -- |builds the string that is run by the interpreter from a PlotMsg
 buildPlotString :: PlotMsg -> String
