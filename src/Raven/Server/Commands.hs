@@ -35,15 +35,9 @@ cmdMap = Map.fromList
   , (":logon",Cmd { parseFunc = parseLogon
                   , help = helpLogon
                   })
-  , (":repl?",Cmd { parseFunc = parseReplq
-                  , help = helpReplq
-                  })
   , (":logout",Cmd { parseFunc = parseLogout
                    , help = helpLogout
                    })
-  , (":stopRepl",Cmd { parseFunc = parseStopRepl
-                     , help = helpStopRepl
-                     })
   , (":allUsers",Cmd { parseFunc = parseAllUsers
                      , help = helpAllUsers
                      })
@@ -113,21 +107,6 @@ helpLogon =
   ":logon logs a user on to the server.\n\
   \The command accepts two arguments, username and password."
 
--- |Parses a repl? command
-parseReplq :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
-parseReplq server self [n,":repl?"] = send server (self,REPLInfoMsg n)
-parseReplq server self (n:":repl?":_) =
-  send server (self,ProcessedMsg n ":repl? takes no arguments")
-parseReplq server _ _ =
-  buildLogMsg "Command pattern match failed" >>=
-  send server
-
--- |Sends information on a repl? command
-helpReplq :: ByteString
-helpReplq =
-  ":repl? determines if the current user has a repl running.\n\
-  \The command accepts no arguments and requires a logged on user."
-
 -- |parse a logout command
 parseLogout :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
 parseLogout server self [n,":logout"] = send server (self,LogoutMsg n)
@@ -141,23 +120,6 @@ parseLogout server _ _ =
 helpLogout :: ByteString
 helpLogout =
   ":logout logs the current user out of the sever.\n\
-  \The command accepts no arguments and requires a logged on user."
-
--- |Parse a stop repl command
-parseStopRepl :: ProcessId -> ConnectionId -> [ByteString] -> Process ()
-parseStopRepl server self [n,":stoprepl"] =
-  send server (self,StopREPLMSG n)
-parseStopRepl server self (n:":stopRepl":_) =
-  send server (self,ProcessedMsg n ":stoprepl take no arguments")
-parseStopRepl server _ _ =
-  buildLogMsg "Command pattern match failed" >>=
-  send server
-
--- |sends information about a stopRepl command
-helpStopRepl :: ByteString
-helpStopRepl =
-  ":stopRepl checks if the current user has a repl running, and if so,\
-  \stops it.\n\
   \The command accepts no arguments and requires a logged on user."
 
 -- |parse the allUsers command
