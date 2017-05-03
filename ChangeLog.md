@@ -1,6 +1,12 @@
 # Revision history for raven
 
 
+## 0.1.10 -- 17-5-4
+
+* The server has been redone to remove the ConnNode and now has a single
+REPLNode.
+
+
 ## 0.1.9 -- 17-4-21
 
 * The client has been rebuilt (partially) with the gtk3 package.

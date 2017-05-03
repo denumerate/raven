@@ -43,7 +43,7 @@ main = getIp >>=
                 (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))))
   where
     header = "Usage: raven [OPTION..]"
-    ver = "0.1.9"
+    ver = "0.1.10"
 
 getIp :: IO String
 getIp =
