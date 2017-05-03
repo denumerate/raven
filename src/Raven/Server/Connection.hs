@@ -25,28 +25,32 @@ connTimeout = 1800000000
 -- |Listen for and handle events from the endpoint.
 -- The pid is the id of the node's listening process
 listenAtEnd :: Transport -> EndPoint -> LocalNode ->
-  Map ConnectionId (MVar Connection) -> ProcessId -> IO ()
+  MVar (Map ConnectionId Connection) -> ProcessId -> IO ()
 listenAtEnd trans end serverN conns pid = receive end >>=
   (\event -> case event of
-      ConnectionOpened cid reliabilty adrs -> newEmptyMVar >>=
-             (\cNode -> forkIO
-               (Network.Transport.connect end adrs reliabilty
-                (defaultConnectHints{connectTimeout = Just connTimeout}) >>=
-                 (\conn -> case conn of
-                     Right conn' -> putMVar cNode conn'
-                     Left err ->
-                       runProcess serverN
-                           (buildLogMsg
-                             ("Connection failed with " ++ show adrs
-                               ++ ". " ++ show err) >>=
-                             Control.Distributed.Process.send pid))) >>
-               listenAtEnd trans end serverN (Map.insert cid cNode conns) pid)
+      ConnectionOpened cid reliabilty adrs -> forkIO
+             (takeMVar conns >>=
+              (\conns' ->
+                  Network.Transport.connect end adrs reliabilty
+                  (defaultConnectHints{connectTimeout = Just connTimeout}) >>=
+                  (\conn -> case conn of
+                      Right conn' -> putMVar conns $ Map.insert cid conn' conns'
+                      Left err ->
+                        putMVar conns conns' >>
+                        runProcess serverN
+                            (buildLogMsg
+                              ("Connection failed with " ++ show adrs
+                                ++ ". " ++ show err) >>=
+                              Control.Distributed.Process.send pid)))) >>
+                listenAtEnd trans end serverN conns pid
       Received cid [info] -> forkIO
              (let wds = B.words info in
                  runProcess serverN (handleReceived pid wds cid)) >>
              listenAtEnd trans end serverN conns pid
-      ConnectionClosed cid -> listenAtEnd trans end serverN
-                              (Map.delete cid conns) pid
+      ConnectionClosed cid ->
+        takeMVar conns >>=
+        putMVar conns . Map.delete cid >>
+        listenAtEnd trans end serverN conns pid
       EndPointClosed -> putStrLn "EndPoint Closed"
       ErrorEvent (TransportError _ err) ->
         runProcess serverN
@@ -59,13 +63,32 @@ listenAtEnd trans end serverN conns pid = receive end >>=
            listenAtEnd trans end serverN conns pid)
 
 -- |Takes the result of the servers work and sends it back to the client
-sendResult :: Connection -> ProcessId -> ProcessedMsg -> Process ()
-sendResult conn server (ProcessedMsg n msg) =
-  liftIO (Network.Transport.send conn [n," ",B.pack msg]) >>=
-  handleSent server
-sendResult conn server (ProcessedBSMsg n msg) =
-  liftIO (Network.Transport.send conn [n," ",msg]) >>=
-  handleSent server
+sendResult :: MVar (Map ConnectionId Connection) -> MVar ProcessId ->
+  (ConnectionId,ProcessedMsg) -> Process ()
+sendResult conns server (cid,ProcessedMsg n msg) =
+  liftIO (readMVar conns) >>=
+  (\conns' ->
+     liftIO (readMVar server) >>=
+     (\server' ->
+        case Map.lookup cid conns' of
+          Just conn ->
+            liftIO (Network.Transport.send conn [n," ",B.pack msg]) >>=
+            handleSent server'
+          _ ->
+            buildLogMsg "Connection not found on send" >>=
+            Control.Distributed.Process.send server'))
+sendResult conns server (cid,ProcessedBSMsg n msg) =
+  liftIO (readMVar conns) >>=
+  (\conns' ->
+     liftIO (readMVar server) >>=
+     (\server' ->
+        case Map.lookup cid conns' of
+          Just conn ->
+            liftIO (Network.Transport.send conn [n," ",msg]) >>=
+            handleSent server'
+          _ ->
+            buildLogMsg "Connection not found on send" >>=
+            Control.Distributed.Process.send server'))
 
 -- |handles the output from a Transport send
 handleSent :: ProcessId -> Either (TransportError SendErrorCode) () -> Process ()

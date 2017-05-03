@@ -31,37 +31,39 @@ newServerNode trans end db = newLocalNode trans initRemoteTable >>=
   newEmptyMVar >>=
     (\serverpid -> newMVar Map.empty >>=
       (\conMap -> newMVar Map.empty >>=
-        (\uMap -> newResourceNode trans serverpid db >>=
-          (\resNode -> runProcess node
-            (liftIO (readMVar resNode) >>=
-              (\resNode' ->
-                 buildLogMsg ("Server established at " ++ (show . address) end) >>=
-                Control.Distributed.Process.send resNode') >>
-              spawnLocal (forever (receiveWait
-                                   [ match (handleREPL trans conMap uMap serverpid)
-                                   , match (handlePlot trans conMap uMap serverpid)
-                                   , match (handleLog resNode)
-                                   , match (handleLogin resNode)
-                                   , match (handleLoginSuc conMap uMap)
-                                   , match (handleLogout serverpid conMap)
-                                   , match (handleKill  serverpid conMap uMap
-                                             trans end resNode)
-                                   , match (handleREPLInfo serverpid conMap uMap)
-                                   , match (handleStopREPL serverpid conMap uMap)
-                                   , match (handleAllUsers serverpid conMap uMap resNode)
-                                   , match (handleAddUser serverpid conMap uMap resNode)
-                                   , match (handleDeleteUser serverpid conMap uMap resNode)
-                                   , match (handleDeleteUserSucc serverpid uMap)
-                                   , match (handleChangeRootAccess serverpid conMap uMap
-                                            resNode)
-                                   , match (handleRootAccessChanged serverpid uMap)
-                                   , match (handleChangeUsersPassword serverpid conMap
-                                            uMap resNode)
-                                   , matchUnknown (catchAllMsgs' resNode "ServerNode")
-                                   ])) >>=
-              (\lpid -> liftIO (putMVar serverpid lpid) >>
-                        (liftIO . listenAtEnd trans end node Map.empty) lpid) >>
-              return ()))))))
+        (\uMap -> newMVar Map.empty >>=
+          (\sendMap -> newResourceNode trans serverpid db >>=
+            (\resNode -> runProcess node
+              (liftIO (readMVar resNode) >>=
+               (\resNode' ->
+                  buildLogMsg ("Server established at " ++ (show . address) end) >>=
+                  Control.Distributed.Process.send resNode') >>
+               spawnLocal (forever (receiveWait
+                                    [ match (sendResult sendMap serverpid)
+                                    , match (handleREPL trans conMap uMap serverpid)
+                                    , match (handlePlot trans conMap uMap serverpid)
+                                    , match (handleLog resNode)
+                                    , match (handleLogin resNode)
+                                    , match (handleLoginSuc conMap uMap)
+                                    , match (handleLogout serverpid conMap)
+                                    , match (handleKill  serverpid conMap uMap
+                                              trans end resNode)
+                                    , match (handleREPLInfo serverpid conMap uMap)
+                                    , match (handleStopREPL serverpid conMap uMap)
+                                    , match (handleAllUsers serverpid conMap uMap resNode)
+                                    , match (handleAddUser serverpid conMap uMap resNode)
+                                    , match (handleDeleteUser serverpid conMap uMap resNode)
+                                    , match (handleDeleteUserSucc serverpid uMap)
+                                    , match (handleChangeRootAccess serverpid conMap uMap
+                                             resNode)
+                                    , match (handleRootAccessChanged serverpid uMap)
+                                    , match (handleChangeUsersPassword serverpid conMap
+                                             uMap resNode)
+                                    , matchUnknown (catchAllMsgs' resNode "ServerNode")
+                                    ])) >>=
+               (\lpid -> liftIO (putMVar serverpid lpid) >>
+                         (liftIO . listenAtEnd trans end node sendMap) lpid) >>
+               return ())))))))
 
 -- |Handles a REPLMsg by looking for the users replNode (and handling errors)
 -- and then sending the message.
