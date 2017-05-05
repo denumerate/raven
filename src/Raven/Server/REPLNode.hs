@@ -63,10 +63,7 @@ runPlot interpS server (pid,pm@(PlotMsg n _ _)) = void $ spawnLocal
    (\server' ->
       liftIO (readMVar interpS) >>=
       (\interpS' -> liftIO (interpPlot interpS' (buildPlotString pm)) >>=
-        (\out -> case out of
-            Left err ->
-              Control.Distributed.Process.send server' (pid,ProcessedMsg n err)
-            Right fname -> liftIO (putStrLn (take 100 (show fname)))
+        (\out -> liftIO (putStrLn (take 1000 (show out)))
             --Control.Distributed.Process.send pid (PlotDoneMsg n fname)
         ))))
 

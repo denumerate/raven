@@ -6,6 +6,7 @@ import Network.Info
 import System.Console.GetOpt
 import System.Environment
 import Control.Concurrent
+import Control.Concurrent.Async
 import qualified Data.ByteString.Char8 as B
 
 import Raven.Server
