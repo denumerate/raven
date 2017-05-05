@@ -33,9 +33,9 @@ main = getIp >>=
                       (True,_,_,_) -> putStrLn $ "Raven version " ++ ver
                       (_,True,_,_) -> putStrLn $ usageInfo header options
                       (_,_,True,Just address) ->
-                        forkIO (initClient ip clientPort
-                                (EndPointAddress (B.pack address))) >>
-                        initServer ip serverPort (buildDBString dbip dbport)
+                        forkIO (initServer ip serverPort (buildDBString dbip dbport)) >>
+                        initClient ip clientPort
+                                   (EndPointAddress (B.pack address))
                       (_,_,_,Just address) -> initClient ip clientPort
                                    (EndPointAddress (B.pack address))
                       _ -> initServer "127.0.0.1" serverPort
