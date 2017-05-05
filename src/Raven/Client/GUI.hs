@@ -28,14 +28,18 @@ guiMain conn end server = buildFilePaths >>
   (\w ->
      windowSettings conn w >>
      textBufferNew Nothing >>=
-     (\buf -> buildConnInfo end server buf >>=
+     (\buf -> buildConnInfo end server >>=
        (\connL ->
           vBoxNew False 2 >>=
          (\vbox ->
             boxPackStart vbox connL PackNatural 2 >>
             newMVar (V.singleton buf) >>=
-            buildWork conn >>=
-            (\ws -> boxPackEnd vbox ws PackGrow 2) >>
+            (\wvec ->
+               buildWork conn wvec >>=
+               (\ws -> boxPackEnd vbox ws PackGrow 2) >>
+               textViewGetBuffer connL >>=
+               (\cbuf ->
+                  forkIO (listenAtEnd end cbuf wvec))) >>
             containerAdd w vbox))) >>
      widgetShowAll w) >>
   mainGUI
@@ -63,11 +67,10 @@ cleanFiles :: IO ()
 cleanFiles = removeDirectoryRecursive ".raven/client/plots"
 
 -- |Creates label that displays connection info and starts up the listening process
-buildConnInfo :: EndPoint -> EndPointAddress -> TextBuffer -> IO TextView
-buildConnInfo end server buf =
+buildConnInfo :: EndPoint -> EndPointAddress -> IO TextView
+buildConnInfo end server =
   textBufferNew Nothing >>=
   (\tbuf ->
-     forkIO (listenAtEnd end tbuf buf) >>
      textBufferSetText tbuf ("Connection Established: " ++ show server) >>
      textViewNewWithBuffer tbuf >>=
      (\tview ->

@@ -1,7 +1,6 @@
 module Raven.Server.ResourceNode
   ( ResourceNode
   , newResourceNode
-  , cleanResourceNode
   )where
 
 import Network.Transport
@@ -47,11 +46,6 @@ newResourceNode trans server dbAddr =
                                  ])) >>=
             liftIO . putMVar pid) >>
           return pid))))
-
--- |Tells the listening process on a resourceNode to exit
-cleanResourceNode :: ResourceNode -> Process ()
-cleanResourceNode self = liftIO (readMVar self) >>=
-  (`exit` "Cleaning ResourceNode")
 
 -- |Handles a log message by printing it to the supplied handle,
 -- should be the log file.
