@@ -7,6 +7,7 @@ import System.Console.GetOpt
 import System.Environment
 import Control.Concurrent
 import Control.Concurrent.Async
+import Control.Monad
 import qualified Data.ByteString.Char8 as B
 
 import Raven.Server
@@ -34,9 +35,11 @@ main = getIp >>=
                       (True,_,_,_) -> putStrLn $ "Raven version " ++ ver
                       (_,True,_,_) -> putStrLn $ usageInfo header options
                       (_,_,True,Just address) ->
-                        forkIO (initServer ip serverPort (buildDBString dbip dbport)) >>
-                        initClient ip clientPort
-                                   (EndPointAddress (B.pack address))
+                        void $
+                        async (initServer ip serverPort (buildDBString dbip dbport)) >>=
+                        (\serverA ->
+                           initClient ip clientPort (EndPointAddress (B.pack address)) >>
+                           wait serverA)
                       (_,_,_,Just address) -> initClient ip clientPort
                                    (EndPointAddress (B.pack address))
                       _ -> initServer "127.0.0.1" serverPort
