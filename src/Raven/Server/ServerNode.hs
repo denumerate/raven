@@ -67,7 +67,7 @@ newServerNode trans end db = newLocalNode trans initRemoteTable >>=
 -- |Handles a REPLMsg by looking for the users replNode (and handling errors)
 -- and then sending the message.
 -- If no node is found, one is created.
-handleREPL :: REPLNode -> (ConnectionId,PlotMsg) -> Process ()
+handleREPL :: REPLNode -> (ConnectionId,REPLMsg) -> Process ()
 handleREPL rNode msg = void $ spawnLocal $
   liftIO (readMVar rNode) >>=
   (`Control.Distributed.Process.send` msg)
