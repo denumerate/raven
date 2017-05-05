@@ -62,10 +62,11 @@ runPlot interpS server (pid,pm@(PlotMsg n _ _)) = void $ spawnLocal
   (liftIO (readMVar server) >>=
    (\server' ->
       liftIO (readMVar interpS) >>=
-      (\interpS' -> liftIO (interpPlot interpS' (buildPlotString pm)) >>=
-        (\out -> liftIO (putStrLn (take 1000 (show out)))
-            --Control.Distributed.Process.send pid (PlotDoneMsg n fname)
-        ))))
+      (\interpS' ->
+         liftIO (interpPlot interpS' (buildPlotString pm))) >>=
+      (\out ->
+          Control.Distributed.Process.send server'
+          (pid,ProcessedMsg n out))))
 
 -- |builds the string that is run by the interpreter from a PlotMsg
 buildPlotString :: PlotMsg -> String
