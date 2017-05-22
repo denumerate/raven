@@ -6,12 +6,8 @@ module Raven.Plot
 import Graphics.Rendering.Chart.Easy
 import Graphics.Rendering.Chart.Backend.Cairo
 
-import Data.ByteString.Char8 (ByteString,unpack)
-import qualified Data.ByteString.Lazy as LB
-
 import Data.Time.Clock
 import System.Directory
-import Codec.Picture
 
 -- |Builds the passed graph and stores it in the graph folder (name is timestamp)
 buildPlot :: (Default r,ToRenderable r) => EC r () ->
@@ -21,14 +17,7 @@ buildPlot graph = getHomeDirectory >>=
     (getCurrentTime >>=
      (\time -> let name = buildPlotName time
        in toFile def name graph >>
-          readImage name >>=
-          (\img -> case img of
-              Left str -> return str
-              Right img' -> case encodeDynamicBitmap img' of
-                Left str -> return str
-                Right bstring ->
-                  removeFile name >>
-                  return (unpack (LB.toStrict bstring))))))
+          return name)))
 
 -- |Creates the file name using the utctime
 buildPlotName :: UTCTime -> String
